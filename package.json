@@ -8,6 +8,7 @@
     "p": "NODE_OPTIONS='--no-deprecation' next start",
     "l": "biome lint --write .",
     "f": "biome format --write .",
+    "cl": "rm -rf .next",
     "ua": "pnpm dlx shadcn@latest add",
     "dg": "drizzle-kit generate --config=drizzle.config.ts",
     "dm": "drizzle-kit migrate --config=drizzle.config.ts",
@@ -44,7 +45,7 @@
     "uploadthing": "^7.4.4"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.1.2",
+    "@biomejs/biome": "2.1.4",
     "@types/node": "^20",
     "@types/nodemailer": "^6.4.17",
     "@types/react": "19.1.8",
