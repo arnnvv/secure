@@ -1,7 +1,7 @@
 "use client";
 
 import type { Device, Message, User } from "@/lib/db/schema";
-import { type JSX, useState, useEffect, useCallback } from "react";
+import { type JSX, useState, useEffect } from "react";
 import { Lock } from "lucide-react";
 import {
   decryptMessage,
@@ -28,7 +28,7 @@ export type UserWithDevices = User & {
   devices: Pick<Device, "id" | "publicKey">[];
 };
 
-const decryptionCache = new Map<string, string>();
+const decryptionCache = new Map<string, string | JSX.Element>();
 
 export const RecentChatPreview = ({
   lastMessage,
@@ -43,96 +43,92 @@ export const RecentChatPreview = ({
     "Loading message...",
   );
 
-  const decryptPreview = useCallback(async () => {
-    if (lastMessage.id === -1) {
-      setPreviewText("No messages yet.");
-      return;
-    }
-
-    const cacheKey = `${lastMessage.id}-${lastMessage.content}`;
-    if (decryptionCache.has(cacheKey)) {
-      setPreviewText(decryptionCache.get(cacheKey)!);
-      return;
-    }
-
-    if (!isEncryptedPayload(lastMessage.content)) {
-      setPreviewText(lastMessage.content);
-      decryptionCache.set(cacheKey, lastMessage.content);
-      return;
-    }
-
-    try {
-      const payload: MessagePayload = JSON.parse(lastMessage.content);
-      const myDeviceId = await cryptoStore.getDeviceId();
-      const myPrivateKey = await cryptoStore.getKey("privateKey");
-
-      if (!myDeviceId || !myPrivateKey) {
-        throw new Error("Local device keys not found.");
+  useEffect(() => {
+    const decryptPreview = async () => {
+      if (!lastMessage) {
+        setPreviewText("No messages yet.");
+        return;
       }
 
-      const senderIsSelf = lastMessage.senderId === sessionUser.id;
+      const cacheKey = `${lastMessage.id}-${lastMessage.content}`;
+      if (decryptionCache.has(cacheKey)) {
+        setPreviewText(decryptionCache.get(cacheKey)!);
+        return;
+      }
 
-      let partnerPublicKey: CryptoKey;
-      let ciphertext: string;
+      if (!isEncryptedPayload(lastMessage.content)) {
+        setPreviewText(lastMessage.content);
+        decryptionCache.set(cacheKey, lastMessage.content);
+        return;
+      }
 
-      const ciphertextForThisDevice = payload.recipients[+myDeviceId];
+      try {
+        const payload: MessagePayload = JSON.parse(lastMessage.content);
+        const myDeviceId = await cryptoStore.getDeviceId();
+        const myPrivateKey = await cryptoStore.getKey("privateKey");
 
-      if (!ciphertextForThisDevice) {
-        if (senderIsSelf) {
-          const friendDeviceIds = Object.keys(payload.recipients);
-          if (friendDeviceIds.length === 0) {
-            throw new Error("No recipients in message payload.");
+        if (!myDeviceId || !myPrivateKey) {
+          throw new Error("Local device keys not found.");
+        }
+
+        const senderIsSelf = lastMessage.senderId === sessionUser.id;
+
+        let partnerPublicKey: CryptoKey;
+        let ciphertext: string;
+
+        const ciphertextForThisDevice = payload.recipients[+myDeviceId];
+
+        if (!ciphertextForThisDevice) {
+          if (senderIsSelf) {
+            const friendDeviceIds = Object.keys(payload.recipients);
+            if (friendDeviceIds.length === 0)
+              throw new Error("No recipients in message payload.");
+            const friendDeviceId = friendDeviceIds[0];
+            const friendDevice = friend.devices.find(
+              (d) => d.id === Number(friendDeviceId),
+            );
+
+            if (!friendDevice?.publicKey)
+              throw new Error("Friend's device or public key not found.");
+            partnerPublicKey = await importPublicKey(friendDevice.publicKey);
+            ciphertext = payload.recipients[Number(friendDeviceId)];
+          } else {
+            throw new Error("Message not encrypted for this device.");
           }
-          const friendDeviceId = friendDeviceIds[0];
-          const friendDevice = friend.devices.find(
-            (d) => d.id === Number(friendDeviceId),
-          );
-
-          if (!friendDevice?.publicKey) {
-            throw new Error("Friend's device or public key not found.");
-          }
-          partnerPublicKey = await importPublicKey(friendDevice.publicKey);
-          ciphertext = payload.recipients[Number(friendDeviceId)];
         } else {
-          throw new Error("Message not encrypted for this device.");
+          const senderDevice = friend.devices.find(
+            (d) => d.id === payload.senderDeviceId,
+          );
+          if (!senderDevice?.publicKey)
+            throw new Error("Sender's device or public key not found.");
+          partnerPublicKey = await importPublicKey(senderDevice.publicKey);
+          ciphertext = ciphertextForThisDevice;
         }
-      } else {
-        const senderDevice = friend.devices.find(
-          (d) => d.id === payload.senderDeviceId,
+
+        const sharedKey = await deriveSharedSecret(
+          myPrivateKey,
+          partnerPublicKey,
         );
-        if (!senderDevice?.publicKey) {
-          throw new Error("Sender's device or public key not found.");
-        }
-        partnerPublicKey = await importPublicKey(senderDevice.publicKey);
-        ciphertext = ciphertextForThisDevice;
+        const decrypted = await decryptMessage(sharedKey, ciphertext);
+
+        setPreviewText(decrypted);
+        decryptionCache.set(cacheKey, decrypted);
+      } catch (_e) {
+        const fallback = (
+          <span className="flex items-center gap-1 text-gray-500 italic">
+            <Lock className="w-4 h-4" />
+            Encrypted Message
+          </span>
+        );
+        setPreviewText(fallback);
+        decryptionCache.set(cacheKey, fallback);
       }
+    };
 
-      const sharedKey = await deriveSharedSecret(
-        myPrivateKey,
-        partnerPublicKey,
-      );
-      const decrypted = await decryptMessage(sharedKey, ciphertext);
-
-      setPreviewText(decrypted);
-      decryptionCache.set(cacheKey, decrypted);
-    } catch (_e) {
-      const fallback = (
-        <span className="flex items-center gap-1 text-gray-500 italic">
-          <Lock className="w-4 h-4" />
-          Encrypted Message
-        </span>
-      );
-      setPreviewText(fallback);
-      decryptionCache.set(cacheKey, "🔒 Encrypted Message");
-    }
+    decryptPreview();
   }, [lastMessage, sessionUser, friend]);
 
-  useEffect(() => {
-    decryptPreview();
-  }, [decryptPreview]);
-
-  const isFromSelf =
-    lastMessage.id !== -1 && lastMessage.senderId === sessionUser.id;
+  const isFromSelf = lastMessage && lastMessage.senderId === sessionUser.id;
 
   return (
     <div>
