@@ -70,7 +70,7 @@ export const sessions = createTable("sessions", {
   id: text("id").primaryKey(),
   userId: integer("user_id")
     .notNull()
-    .references(() => users.id),
+    .references(() => users.id, { onDelete: "cascade" }),
   expiresAt: timestamp("expires_at", {
     withTimezone: true,
     mode: "date",
@@ -85,7 +85,7 @@ export const emailVerificationRequests = createTable(
     id: serial("id").primaryKey(),
     userId: integer("user_id")
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, { onDelete: "cascade" }),
     email: text("email").notNull(),
     code: text("code").notNull(),
     expiresAt: timestamp("expires_at", {
@@ -102,10 +102,10 @@ export const friendRequests = createTable("friend_requests", {
   id: serial("id").primaryKey(),
   requesterId: integer("requester_id")
     .notNull()
-    .references(() => users.id),
+    .references(() => users.id, { onDelete: "cascade" }),
   recipientId: integer("recipient_id")
     .notNull()
-    .references(() => users.id),
+    .references(() => users.id, { onDelete: "cascade" }),
   status: friendReqStatusEnum("status").notNull(),
   createdAt: timestamp("created_at", {
     withTimezone: true,
@@ -128,10 +128,10 @@ export const messages = createTable("messages", {
   id: serial("id").primaryKey(),
   senderId: integer("sender_id")
     .notNull()
-    .references(() => users.id),
+    .references(() => users.id, { onDelete: "cascade" }),
   recipientId: integer("recipient_id")
     .notNull()
-    .references(() => users.id),
+    .references(() => users.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
   createdAt: timestamp("created_at", {
     withTimezone: true,
@@ -141,3 +141,11 @@ export const messages = createTable("messages", {
 
 export type Message = typeof messages.$inferSelect;
 export type NewMessage = typeof messages.$inferInsert;
+
+export const rateLimits = createTable("rate_limits", {
+  ip: varchar("ip", { length: 64 }).primaryKey(),
+  timestamp: timestamp("timestamp", {
+    withTimezone: true,
+    mode: "date",
+  }).notNull(),
+});

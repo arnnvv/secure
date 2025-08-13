@@ -17,6 +17,32 @@ export const validateEmail = (data: Email): boolean => {
   return true;
 };
 
+export const validateUsername = (
+  username: unknown,
+): { isValid: boolean; message: string; username?: string } => {
+  if (typeof username !== "string" || !username.trim()) {
+    return { isValid: false, message: "Username is required." };
+  }
+
+  const trimmedUsername = username.trim();
+
+  if (trimmedUsername.length < 3 || trimmedUsername.length > 20) {
+    return {
+      isValid: false,
+      message: "Username must be between 3 and 20 characters.",
+    };
+  }
+
+  if (/\s/.test(trimmedUsername)) {
+    return {
+      isValid: false,
+      message: "Username should not contain spaces.",
+    };
+  }
+
+  return { isValid: true, message: "Valid", username: trimmedUsername };
+};
+
 export const validateMessage = (data: Message): boolean => {
   if (typeof data.id !== "number") {
     console.error("Invalid type: id must be a number.");

@@ -31,7 +31,7 @@ import { and, eq } from "drizzle-orm";
 import { utapi } from "./lib/upload";
 import type { UploadFileResult } from "uploadthing/types";
 import type { ActionResult } from "./lib/formComtrol";
-import { validateEmail } from "./lib/validate";
+import { validateEmail, validateUsername } from "./lib/validate";
 import { pusherServer } from "./lib/pusher";
 import { chatHrefConstructor, toPusherKey } from "./lib/utils";
 import { resolveIdstoUsers } from "./lib/resolveIdsToUsers";
@@ -59,7 +59,7 @@ export const logInAction = async (
   success: boolean;
   message: string;
 }> => {
-  if (!globalPOSTRateLimit()) {
+  if (!(await globalPOSTRateLimit())) {
     return {
       success: false,
       message: "Too many requests",
@@ -126,7 +126,7 @@ export const signUpAction = async (
   success: boolean;
   message: string;
 }> => {
-  if (!globalPOSTRateLimit()) {
+  if (!(await globalPOSTRateLimit())) {
     return {
       success: false,
       message: "Too many requests",
@@ -161,30 +161,33 @@ export const signUpAction = async (
     };
 
   const username = formData.get("username");
-  if (typeof username !== "string" || !username)
+  const usernameValidation = validateUsername(username);
+  if (!usernameValidation.isValid) {
     return {
       success: false,
-      message: "Name is required",
-    };
-
-  if (username.includes(" ")) {
-    return {
-      success: false,
-      message: "Username should not contain spaces.",
+      message: usernameValidation.message,
     };
   }
 
   const disallowedPrefixes = ["google-", "github-"];
-  if (disallowedPrefixes.some((prefix) => username.startsWith(prefix))) {
+  if (
+    disallowedPrefixes.some((prefix) =>
+      usernameValidation.username!.startsWith(prefix),
+    )
+  ) {
     return {
       success: false,
       message: "Username cannot start with 'google-' or 'github-'.",
     };
   }
+
   try {
     const existingUser = (await db.query.users.findFirst({
       where: (users, { or, eq }) =>
-        or(eq(users.email, email), eq(users.username, username)),
+        or(
+          eq(users.email, email),
+          eq(users.username, usernameValidation.username!),
+        ),
     })) as User | undefined;
 
     if (existingUser) {
@@ -194,7 +197,7 @@ export const signUpAction = async (
           message: "Email is already in use",
         };
       }
-      if (existingUser.username === username) {
+      if (existingUser.username === usernameValidation.username) {
         return {
           success: false,
           message: "Username is already taken",
@@ -204,7 +207,7 @@ export const signUpAction = async (
 
     const hashedPassword = await hashPassword(password);
     const newUser = {
-      username,
+      username: usernameValidation.username!,
       email,
       password_hash: hashedPassword,
     };
@@ -242,7 +245,7 @@ export const signOutAction = async (): Promise<{
   success: boolean;
   message: string;
 }> => {
-  if (!globalGETRateLimit()) {
+  if (!(await globalGETRateLimit())) {
     return {
       success: false,
       message: "Too many requests",
@@ -272,7 +275,7 @@ export const signOutAction = async (): Promise<{
 };
 
 export async function verifyOTPAction(formData: FormData) {
-  if (!globalPOSTRateLimit()) {
+  if (!(await globalPOSTRateLimit())) {
     return {
       success: false,
       message: "Too many requests",
@@ -336,7 +339,7 @@ export async function verifyOTPAction(formData: FormData) {
 }
 
 export async function resendOTPAction() {
-  if (!globalGETRateLimit()) {
+  if (!(await globalGETRateLimit())) {
     return {
       success: false,
       message: "Rate Limit",
@@ -371,7 +374,7 @@ export async function forgotPasswordAction(
   _: any,
   formData: FormData,
 ): Promise<ActionResult> {
-  if (!globalPOSTRateLimit()) {
+  if (!(await globalPOSTRateLimit())) {
     return {
       success: false,
       message: "Rate Limit",
@@ -419,7 +422,7 @@ export async function forgotPasswordAction(
 }
 
 export async function verifyOTPForgotPassword(formData: FormData) {
-  if (!globalPOSTRateLimit()) {
+  if (!(await globalPOSTRateLimit())) {
     return {
       success: false,
       message: "Too many requests",
@@ -501,7 +504,7 @@ export async function verifyOTPForgotPassword(formData: FormData) {
 }
 
 export async function resendOTPForgotPassword(email: string) {
-  if (!globalPOSTRateLimit()) {
+  if (!(await globalPOSTRateLimit())) {
     return {
       success: false,
       message: "Rate Limit",
@@ -541,6 +544,12 @@ export async function resetPasswordAction(
   _: any,
   formData: FormData,
 ): Promise<ActionResult> {
+  if (!(await globalPOSTRateLimit())) {
+    return {
+      success: false,
+      message: "Too many requests",
+    };
+  }
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const confirmPassword = formData.get("confirmPassword") as string;
@@ -607,22 +616,28 @@ export const changeUsernameAction = async (
   success: boolean;
   message: string;
 }> => {
-  const username = formData.get("username");
-  if (typeof username !== "string")
+  if (!(await globalPOSTRateLimit())) {
     return {
       success: false,
-      message: "username is required",
+      message: "Too many requests",
     };
+  }
+  const username = formData.get("username");
+  const usernameValidation = validateUsername(username);
 
-  if (username.includes(" ")) {
+  if (!usernameValidation.isValid) {
     return {
       success: false,
-      message: "Username should not contain spaces.",
+      message: usernameValidation.message,
     };
   }
 
   const disallowedPrefixes = ["google-", "github-"];
-  if (disallowedPrefixes.some((prefix) => username.startsWith(prefix))) {
+  if (
+    disallowedPrefixes.some((prefix) =>
+      usernameValidation.username!.startsWith(prefix),
+    )
+  ) {
     return {
       success: false,
       message: "Username cannot start with 'google-' or 'github-'.",
@@ -639,7 +654,7 @@ export const changeUsernameAction = async (
 
     await db
       .update(users)
-      .set({ username: username })
+      .set({ username: usernameValidation.username! })
       .where(eq(users.email, user.email))
       .returning();
 
@@ -662,6 +677,12 @@ export const changeUsernameAction = async (
 };
 
 export async function uploadFile(fd: FormData): Promise<ActionResult> {
+  if (!(await globalPOSTRateLimit())) {
+    return {
+      success: false,
+      message: "Too many requests",
+    };
+  }
   const { session, user } = await getCurrentSession();
   if (session === null)
     return {
@@ -697,6 +718,12 @@ export const addFriendAction = async (
   _: any,
   formData: FormData,
 ): Promise<ActionResult> => {
+  if (!(await globalPOSTRateLimit())) {
+    return {
+      success: false,
+      message: "Too many requests",
+    };
+  }
   const { user } = await getCurrentSession();
   if (!user) return { success: false, message: "not logged in" };
   const receiverEmail = formData.get("friend-email") as string;
@@ -772,6 +799,11 @@ export const acceptFriendRequest = async (
   | { error: string; message?: undefined }
   | { message: string; error?: undefined }
 > => {
+  if (!(await globalPOSTRateLimit())) {
+    return {
+      error: "Too many requests",
+    };
+  }
   try {
     const friendRequest: FriendRequest | undefined =
       await db.query.friendRequests.findFirst({
@@ -825,6 +857,11 @@ export const rejectFriendRequest = async (
   | { error: string; message?: undefined }
   | { message: string; error?: undefined }
 > => {
+  if (!(await globalPOSTRateLimit())) {
+    return {
+      error: "Too many requests",
+    };
+  }
   try {
     const friendRequest: FriendRequest | undefined =
       await db.query.friendRequests.findFirst({
@@ -873,6 +910,11 @@ export const sendMessageAction = async ({
     }
   | undefined
 > => {
+  if (!(await globalPOSTRateLimit())) {
+    return {
+      error: "Too many requests",
+    };
+  }
   try {
     const contentPayload = JSON.stringify({
       senderDeviceId,
@@ -921,7 +963,7 @@ export async function registerDeviceAction(
   publicKey: string,
   deviceName: string,
 ): Promise<ActionResult> {
-  if (!globalPOSTRateLimit()) {
+  if (!(await globalPOSTRateLimit())) {
     return { success: false, message: "Too many requests" };
   }
 

@@ -1,13 +1,17 @@
+import { inArray } from "drizzle-orm";
 import { db } from "./db";
 import type { User } from "./db/schema";
+import { users as usersSchema } from "./db/schema";
 
 export const resolveIdstoUsers = async (ids: number[]): Promise<User[]> => {
-  const users: User[] = [];
-  for (const id of ids) {
-    const user = (await db.query.users.findFirst({
-      where: (users, { eq }) => eq(users.id, id),
-    })) as User | undefined;
-    if (user) users.push(user);
+  if (ids.length === 0) {
+    return [];
   }
+
+  const users = await db
+    .select()
+    .from(usersSchema)
+    .where(inArray(usersSchema.id, ids));
+
   return users;
 };

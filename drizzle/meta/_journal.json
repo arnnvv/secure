@@ -15,6 +15,13 @@
       "when": 1752592908363,
       "tag": "0001_grey_outlaw_kid",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1752593000000,
+      "tag": "0002_handy_night_thrasher",
+      "breakpoints": true
     }
   ]
 }

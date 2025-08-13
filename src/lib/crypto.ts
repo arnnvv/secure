@@ -1,3 +1,12 @@
+/*
+ * Do not modify this file without a deep understanding of cryptographic principles
+ * and protocol design.
+ */
+
+import type { UserWithDevices } from "./getFriends";
+import type { Message } from "./db/schema";
+import { cryptoStore } from "./crypto-store";
+
 const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
   let binary = "";
   const bytes = new Uint8Array(buffer);
@@ -127,5 +136,55 @@ export const decryptMessage = async (
   } catch (e) {
     console.error("Decryption failed:", e);
     return "[Could not decrypt message]";
+  }
+};
+
+export const decryptE2EEMessage = async (
+  message: Message,
+  sessionId: number,
+  chatPartner: UserWithDevices,
+): Promise<string> => {
+  try {
+    const payload = JSON.parse(message.content);
+    if (!payload.senderDeviceId || !payload.recipients) {
+      return message.content;
+    }
+
+    const myDeviceId = await cryptoStore.getDeviceId();
+    const myPrivateKey = await cryptoStore.getKey("privateKey");
+
+    if (!myPrivateKey || !myDeviceId) {
+      throw new Error("Local device keys not found.");
+    }
+
+    const senderIsSelf = message.senderId === sessionId;
+    const recipientDeviceId = senderIsSelf
+      ? Object.keys(payload.recipients)[0]
+      : myDeviceId;
+
+    const ciphertext = payload.recipients[recipientDeviceId];
+    if (!ciphertext) {
+      return "[Message not for this device]";
+    }
+
+    const partnerDevice = chatPartner.devices.find((d) =>
+      senderIsSelf
+        ? d.id === parseInt(recipientDeviceId, 10)
+        : d.id === payload.senderDeviceId,
+    );
+
+    if (!partnerDevice) {
+      throw new Error("Could not find partner's device key.");
+    }
+
+    const partnerPublicKey = await importPublicKey(partnerDevice.publicKey);
+    const sharedKey = await deriveSharedSecret(myPrivateKey, partnerPublicKey);
+    return await decryptMessage(sharedKey, ciphertext);
+  } catch (error) {
+    console.error(`Failed to decrypt message ${message.id}:`, error);
+    if (error instanceof SyntaxError) {
+      return message.content;
+    }
+    return "[Decryption Error]";
   }
 };
