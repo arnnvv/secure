@@ -1007,3 +1007,45 @@ export async function registerDeviceAction(
     };
   }
 }
+
+export async function revokeDeviceAction(
+  deviceId: number,
+): Promise<ActionResult> {
+  if (!(await globalPOSTRateLimit())) {
+    return { success: false, message: "Too many requests" };
+  }
+
+  const { user } = await getCurrentSession();
+  if (!user) {
+    return { success: false, message: "Not authenticated" };
+  }
+
+  try {
+    const userDevices = await db.query.devices.findMany({
+      where: eq(devices.userId, user.id),
+    });
+
+    if (userDevices.length <= 1) {
+      return {
+        success: false,
+        message:
+          "Cannot revoke your last device. Add a new device before removing this one.",
+      };
+    }
+
+    const deviceToRevoke = userDevices.find((d) => d.id === deviceId);
+
+    if (!deviceToRevoke) {
+      return { success: false, message: "Device not found or not owned." };
+    }
+
+    await db.delete(devices).where(eq(devices.id, deviceId));
+
+    return { success: true, message: "Device successfully revoked." };
+  } catch (_er) {
+    return {
+      success: false,
+      message: "An unexpected error occurred while revoking the device.",
+    };
+  }
+}

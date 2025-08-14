@@ -6,6 +6,7 @@
 import type { UserWithDevices } from "./getFriends";
 import type { Message } from "./db/schema";
 import { cryptoStore } from "./crypto-store";
+import { sha256 } from "./sha";
 
 const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
   let binary = "";
@@ -187,4 +188,26 @@ export const decryptE2EEMessage = async (
     }
     return "[Decryption Error]";
   }
+};
+
+export const generateSafetyNumber = async (
+  user1Keys: string[],
+  user2Keys: string[],
+): Promise<string> => {
+  const allKeys = [...user1Keys, ...user2Keys].sort();
+  const concatenatedKeys = allKeys.join("");
+  const buffer = new TextEncoder().encode(concatenatedKeys);
+  const hashBuffer = sha256(buffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+
+  const chunks: string[] = [];
+  for (let i = 0; i < 6; i++) {
+    const chunkValue =
+      (hashArray[i * 5] << 24) |
+      (hashArray[i * 5 + 1] << 16) |
+      (hashArray[i * 5 + 2] << 8) |
+      hashArray[i * 5 + 3];
+    chunks.push((chunkValue >>> 0).toString().slice(0, 5).padStart(5, "0"));
+  }
+  return chunks.join(" ");
 };

@@ -31,6 +31,12 @@ const sidebarNav: SidebarNavProps[] = [
     href: "/dashboard/add",
     Icon: "UserPlus",
   },
+  {
+    id: 2,
+    name: "Manage Devices",
+    href: "/dashboard/devices",
+    Icon: "KeyRound",
+  },
 ];
 
 export default async function page({
@@ -63,7 +69,7 @@ export default async function page({
 
             <li>
               <div className="text-xs font-semibold leading-6 text-gray-400">
-                Archived
+                Settings
               </div>
               <ul className="-mx-2 mt-2 space-y-1">
                 {sidebarNav.map((opn: SidebarNavProps): JSX.Element => {
