@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1752591786762,
-      "tag": "0000_sparkling_typhoid_mary",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1752592908363,
-      "tag": "0001_grey_outlaw_kid",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1752593000000,
-      "tag": "0002_handy_night_thrasher",
+      "when": 1755151234213,
+      "tag": "0000_deep_franklin_storm",
       "breakpoints": true
     }
   ]

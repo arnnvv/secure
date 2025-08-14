@@ -149,3 +149,22 @@ export const rateLimits = createTable("rate_limits", {
     mode: "date",
   }).notNull(),
 });
+
+export const signedPreKeys = createTable("signed_pre_keys", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  keyId: integer("key_id").notNull(),
+  publicKey: text("public_key").notNull(),
+  signature: text("signature").notNull(),
+});
+
+export const oneTimePreKeys = createTable("one_time_pre_keys", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  keyId: integer("key_id").notNull(),
+  publicKey: text("public_key").notNull(),
+});

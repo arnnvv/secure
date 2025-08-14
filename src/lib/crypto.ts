@@ -202,12 +202,69 @@ export const generateSafetyNumber = async (
 
   const chunks: string[] = [];
   for (let i = 0; i < 6; i++) {
+    const chunkStartIndex = i * 5;
     const chunkValue =
-      (hashArray[i * 5] << 24) |
-      (hashArray[i * 5 + 1] << 16) |
-      (hashArray[i * 5 + 2] << 8) |
-      hashArray[i * 5 + 3];
+      (hashArray[chunkStartIndex] << 24) |
+      (hashArray[chunkStartIndex + 1] << 16) |
+      (hashArray[chunkStartIndex + 2] << 8) |
+      hashArray[chunkStartIndex + 3];
     chunks.push((chunkValue >>> 0).toString().slice(0, 5).padStart(5, "0"));
   }
   return chunks.join(" ");
 };
+
+interface RatchetSession {
+  state: any;
+}
+
+export async function generateAndStorePreKeys(
+  userId: number,
+  identityPrivateKey: CryptoKey,
+): Promise<void> {
+  // 1. Generate a signed pre-key pair.
+  // 2. Sign the public part with the identityPrivateKey.
+  // 3. Store the signed pre-key pair on the server (signedPreKeys table).
+  // 4. Generate a batch of one-time pre-key pairs.
+  // 5. Store them on the server (oneTimePreKeys table).
+  console.warn(
+    "[STUB] generateAndStorePreKeys is not implemented.",
+    userId,
+    identityPrivateKey,
+  );
+}
+
+export async function initializeSessionAsInitiator(
+  recipient: UserWithDevices,
+): Promise<RatchetSession> {
+  console.warn(
+    "[STUB] initializeSessionAsInitiator is not implemented.",
+    recipient,
+  );
+  return { state: "dummy_initiator_state" };
+}
+
+export async function initializeSessionAsResponder(
+  preKeyMessage: any,
+): Promise<RatchetSession> {
+  console.warn(
+    "[STUB] initializeSessionAsResponder is not implemented.",
+    preKeyMessage,
+  );
+  return { state: "dummy_responder_state" };
+}
+
+export async function encryptWithRatchet(
+  session: RatchetSession,
+  plaintext: string,
+): Promise<{ session: RatchetSession; ciphertext: string }> {
+  console.warn("[STUB] encryptWithRatchet is not implemented.");
+  return { session, ciphertext: `(encrypted) ${plaintext}` };
+}
+
+export async function decryptWithRatchet(
+  session: RatchetSession,
+  ciphertext: string,
+): Promise<{ session: RatchetSession; plaintext: string }> {
+  console.warn("[STUB] decryptWithRatchet is not implemented.");
+  return { session, plaintext: `(decrypted) ${ciphertext}` };
+}

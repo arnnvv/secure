@@ -9,7 +9,15 @@ import { and, eq, or } from "drizzle-orm";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import type { JSX } from "react";
-import type { UserWithDevices } from "@/lib/getFriends";
+import { ShieldCheck } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { generateSafetyNumber } from "@/lib/crypto";
 
 export const generateMetadata = async ({
   params,
@@ -52,8 +60,8 @@ export default async function l({
   if (user.id !== userId1 && user.id !== userId2) notFound();
   const chatPartnerId: number = user.id === userId1 ? userId2 : userId1;
 
-  const chatPartner: UserWithDevices | undefined =
-    await db.query.users.findFirst({
+  const [chatPartner, sessionUserWithDevices] = await Promise.all([
+    db.query.users.findFirst({
       where: eq(users.id, chatPartnerId),
       with: {
         devices: {
@@ -63,9 +71,26 @@ export default async function l({
           },
         },
       },
-    });
+    }),
+    db.query.users.findFirst({
+      where: eq(users.id, user.id),
+      with: {
+        devices: {
+          columns: {
+            id: true,
+            publicKey: true,
+          },
+        },
+      },
+    }),
+  ]);
 
-  if (!chatPartner) throw new Error("Chat partner not found");
+  if (!chatPartner || !sessionUserWithDevices)
+    throw new Error("Chat participants not found");
+
+  const myKeys = sessionUserWithDevices.devices.map((d) => d.publicKey);
+  const partnerKeys = chatPartner.devices.map((d) => d.publicKey);
+  const safetyNumber = await generateSafetyNumber(myKeys, partnerKeys);
 
   try {
     if (!user.id || !chatPartner.id) throw new Error("Invalid chat id");
@@ -119,6 +144,31 @@ export default async function l({
             <span className="text-sm text-gray-600">{chatPartner.email}</span>
           </div>
         </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="p-2 rounded-full hover:bg-gray-100"
+              aria-label="Conversation options"
+            >
+              <ShieldCheck className="w-6 h-6 text-gray-500" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Conversation Security</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <div className="px-2 py-1.5 text-sm text-muted-foreground">
+              <p className="mb-2">
+                Verify this safety number with {chatPartner.username} through
+                another channel (e.g., in person) to ensure your connection is
+                secure.
+              </p>
+              <div className="p-3 bg-slate-100 rounded-md text-center font-mono tracking-widest text-lg text-black">
+                {safetyNumber}
+              </div>
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <MessagesComp
