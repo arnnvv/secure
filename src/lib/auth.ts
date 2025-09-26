@@ -1,8 +1,5 @@
 import { eq } from "drizzle-orm";
-import {
-  SESSION_MAX_AGE_SECONDS,
-  SESSION_REFRESH_THRESHOLD_SECONDS,
-} from "./constants";
+import { SESSION_MAX_AGE_SECONDS } from "./constants";
 import { db } from "./db";
 import type { Session, User } from "./db/schema";
 import { sessions, users } from "./db/schema";
@@ -53,25 +50,7 @@ export async function validateSessionToken(
     };
   }
   const { user, session } = result[0];
-  if (Date.now() >= session.expiresAt.getTime()) {
-    await db.delete(sessions).where(eq(sessions.id, session.id));
-    return {
-      session: null,
-      user: null,
-    };
-  }
-  if (
-    Date.now() >=
-    session.expiresAt.getTime() - SESSION_REFRESH_THRESHOLD_SECONDS
-  ) {
-    session.expiresAt = new Date(Date.now() + SESSION_MAX_AGE_SECONDS);
-    await db
-      .update(sessions)
-      .set({
-        expiresAt: session.expiresAt,
-      })
-      .where(eq(sessions.id, session.id));
-  }
+
   return {
     session,
     user,
