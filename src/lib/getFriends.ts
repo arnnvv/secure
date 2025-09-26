@@ -76,12 +76,10 @@ export const getFriendsWithLastMessage = async (
     SELECT
       f.friend_id,
       u.username,
-      u.email,
-      u.password_hash,
-      u.verified,
       u.picture,
-      u.google_id as "googleId",
-      u.github_id as "githubId",
+      -- [FIX] Select the new required field
+      u.world_id_nullifier as "worldIdNullifier",
+      -- [FIX] Removed old, non-existent fields like email, password_hash, etc.
       lm.id as "lastMessageId",
       lm.sender_id as "lastMessageSenderId",
       lm.recipient_id as "lastMessageRecipientId",
@@ -108,12 +106,8 @@ export const getFriendsWithLastMessage = async (
     (row: any) => ({
       id: row.friend_id,
       username: row.username,
-      email: row.email,
-      password_hash: row.password_hash,
-      verified: row.verified,
       picture: row.picture,
-      googleId: row.googleId,
-      githubId: row.githubId,
+      worldIdNullifier: row.worldIdNullifier,
       devices: row.devices || [],
       lastMessage: row.lastMessageId
         ? {
