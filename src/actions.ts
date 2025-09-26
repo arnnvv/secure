@@ -1,14 +1,14 @@
 "use server";
 
+import {
+  type ISuccessResult,
+  VerificationLevel,
+  verifyCloudProof,
+} from "@worldcoin/idkit";
 import { and, desc, eq, inArray, lt, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { cache } from "react";
-import {
-  verifyCloudProof,
-  type ISuccessResult,
-  VerificationLevel,
-} from "@worldcoin/idkit";
 import type { UploadFileResult } from "uploadthing/types";
 import {
   createSession,
@@ -74,7 +74,7 @@ export const verifyAndLoginAction = async (
     };
   }
 
-  if (verifyRes.verification_level !== VerificationLevel.Orb) {
+  if (proof.verification_level !== VerificationLevel.Orb) {
     return {
       success: false,
       message: "Orb-level verification is required for this action.",
@@ -83,14 +83,14 @@ export const verifyAndLoginAction = async (
 
   try {
     let user = await db.query.users.findFirst({
-      where: eq(users.worldIdNullifier, verifyRes.nullifier_hash),
+      where: eq(users.worldIdNullifier, proof.nullifier_hash),
     });
 
     if (!user) {
       const [newUser] = await db
         .insert(users)
         .values({
-          worldIdNullifier: verifyRes.nullifier_hash,
+          worldIdNullifier: proof.nullifier_hash,
         })
         .returning();
       user = newUser;

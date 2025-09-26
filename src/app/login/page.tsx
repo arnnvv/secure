@@ -1,10 +1,10 @@
 "use client";
 
-import { verifyAndLoginAction } from "@/actions";
 import type { ISuccessResult } from "@worldcoin/idkit";
 import { IDKitWidget, VerificationLevel } from "@worldcoin/idkit";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { verifyAndLoginAction } from "@/actions";
 
 export default function LoginPage() {
   const router = useRouter();
