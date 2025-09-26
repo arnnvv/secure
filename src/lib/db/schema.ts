@@ -1,7 +1,5 @@
 import { relations, sql } from "drizzle-orm";
 import {
-  boolean,
-  check,
   index,
   integer,
   pgEnum,
@@ -10,7 +8,6 @@ import {
   serial,
   text,
   timestamp,
-  uniqueIndex,
   varchar,
 } from "drizzle-orm/pg-core";
 
@@ -24,25 +21,12 @@ export const friendReqStatusEnum = pgEnum("friend_req_status", [
   "declined",
 ]);
 
-export const users = createTable(
-  "users",
-  {
-    id: serial("id").primaryKey(),
-    username: varchar("username").unique().notNull(),
-    email: varchar("email", { length: 255 }).unique().notNull(),
-    password_hash: varchar("password_hash"),
-    googleId: text("google_id").unique(),
-    githubId: text("github_id").unique(),
-    verified: boolean("verified").notNull().default(false),
-    picture: text("picture"),
-  },
-  (table) => [
-    check(
-      "auth_method_check",
-      sql`${table.password_hash} IS NOT NULL OR ${table.googleId} IS NOT NULL OR ${table.githubId} IS NOT NULL`,
-    ),
-  ],
-);
+export const users = createTable("users", {
+  id: serial("id").primaryKey(),
+  worldIdNullifier: text("world_id_nullifier").unique().notNull(),
+  username: varchar("username").unique(),
+  picture: text("picture"),
+});
 
 export const usersRelations = relations(users, ({ many }) => ({
   devices: many(devices),
@@ -64,9 +48,7 @@ export const devices = createTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [
-    uniqueIndex("user_id_pub_key_idx").on(table.userId, table.publicKey),
-  ],
+  (table) => [index("user_id_pub_key_idx").on(table.userId, table.publicKey)],
 );
 
 export const devicesRelations = relations(devices, ({ one }) => ({
@@ -92,25 +74,6 @@ export const sessions = createTable("sessions", {
 });
 
 export type Session = typeof sessions.$inferSelect;
-
-export const emailVerificationRequests = createTable(
-  "email_verification_request",
-  {
-    id: serial("id").primaryKey(),
-    userId: integer("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    email: text("email").notNull(),
-    code: text("code").notNull(),
-    expiresAt: timestamp("expires_at", {
-      withTimezone: true,
-      mode: "date",
-    }).notNull(),
-  },
-);
-
-export type EmailVerificationRequest =
-  typeof emailVerificationRequests.$inferSelect;
 
 export const friendRequests = createTable(
   "friend_requests",

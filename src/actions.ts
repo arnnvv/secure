@@ -4,6 +4,11 @@ import { and, desc, eq, inArray, lt, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { cache } from "react";
+import {
+  verifyCloudProof,
+  type ISuccessResult,
+  VerificationLevel,
+} from "@worldcoin/idkit";
 import type { UploadFileResult } from "uploadthing/types";
 import {
   createSession,
@@ -16,7 +21,6 @@ import { db } from "./lib/db";
 import {
   devices,
   deviceVerifications,
-  emailVerificationRequests,
   type FriendRequest,
   friendReqStatusEnum,
   friendRequests,
@@ -26,19 +30,12 @@ import {
   type User,
   users,
 } from "./lib/db/schema";
-import { sendEmail } from "./lib/email";
 import type { ActionResult } from "./lib/formComtrol";
-import {
-  hashPassword,
-  verifyPasswordHash,
-  verifyPasswordStrength,
-} from "./lib/password";
 import { pusherServer } from "./lib/pusher-server";
 import { globalGETRateLimit, globalPOSTRateLimit } from "./lib/request";
 import { deleteSessionTokenCookie, setSessionTokenCookie } from "./lib/session";
 import { utapi } from "./lib/upload";
 import { chatHrefConstructor, toPusherKey } from "./lib/utils";
-import { validateEmail } from "./lib/validate";
 
 export const getCurrentSession = cache(
   async (): Promise<SessionValidationResult> => {
@@ -54,13 +51,9 @@ export const getCurrentSession = cache(
   },
 );
 
-export const logInAction = async (
-  _: any,
-  formData: FormData,
-): Promise<{
-  success: boolean;
-  message: string;
-}> => {
+export const verifyAndLoginAction = async (
+  proof: ISuccessResult,
+): Promise<ActionResult> => {
   if (!globalPOSTRateLimit()) {
     return {
       success: false,
@@ -68,198 +61,63 @@ export const logInAction = async (
     };
   }
 
-  const email = formData.get("email");
-  if (typeof email !== "string")
-    return {
-      success: false,
-      message: "Email is required",
-    };
+  const verifyRes = await verifyCloudProof(
+    proof,
+    process.env.NEXT_PUBLIC_WLD_APP_ID as `app_${string}`,
+    process.env.NEXT_PUBLIC_WLD_ACTION!,
+  );
 
-  if (!/^.+@.+\..+$/.test(email) || email.length >= 256)
+  if (!verifyRes.success) {
     return {
       success: false,
-      message: "Invalid email",
+      message: verifyRes.detail ?? "Proof verification failed.",
     };
+  }
 
-  const password = formData.get("password");
-  if (typeof password !== "string")
+  if (verifyRes.verification_level !== VerificationLevel.Orb) {
     return {
       success: false,
-      message: "Password is required",
+      message: "Orb-level verification is required for this action.",
     };
+  }
 
   try {
-    const existingUser: User | undefined = (await db.query.users.findFirst({
-      where: (users, { eq }) => eq(users.email, email),
-    })) as User | undefined;
-
-    if (!existingUser) {
-      return {
-        success: false,
-        message: "Invalid email or password",
-      };
-    }
-
-    if (!existingUser.password_hash) {
-      return {
-        success: false,
-        message:
-          "This account was created using a social login. Please sign in with Google or GitHub.",
-      };
-    }
-
-    const passwordMatch = await verifyPasswordHash(
-      existingUser.password_hash,
-      password,
-    );
-
-    if (!passwordMatch) {
-      return {
-        success: false,
-        message: "Invalid email or password",
-      };
-    }
-
-    const sessionToken = generateSessionToken();
-    const session = await createSession(sessionToken, existingUser.id);
-    await setSessionTokenCookie(sessionToken, session.expiresAt);
-
-    return {
-      success: true,
-      message: "Login successful",
-    };
-  } catch (e) {
-    console.error(`Login failed: ${e}`);
-    return {
-      success: false,
-      message: "An unexpected error occurred during login.",
-    };
-  }
-};
-
-export const signUpAction = async (
-  _: any,
-  formData: FormData,
-): Promise<{
-  success: boolean;
-  message: string;
-}> => {
-  if (!globalPOSTRateLimit()) {
-    return {
-      success: false,
-      message: "Too many requests",
-    };
-  }
-
-  const email = formData.get("email");
-  if (typeof email !== "string")
-    return {
-      success: false,
-      message: "Email is required",
-    };
-
-  if (!/^.+@.+\..+$/.test(email) || email.length >= 256)
-    return {
-      success: false,
-      message: "Invalid email",
-    };
-
-  const password = formData.get("password");
-  if (typeof password !== "string")
-    return {
-      success: false,
-      message: "Password is required",
-    };
-
-  const strongPassword = await verifyPasswordStrength(password);
-  if (!strongPassword)
-    return {
-      success: false,
-      message: "Weak Password",
-    };
-
-  const username = formData.get("username");
-  if (typeof username !== "string" || !username)
-    return {
-      success: false,
-      message: "Name is required",
-    };
-
-  if (username.includes(" ")) {
-    return {
-      success: false,
-      message: "Username should not contain spaces.",
-    };
-  }
-
-  const disallowedPrefixes = ["google-", "github-"];
-  if (disallowedPrefixes.some((prefix) => username.startsWith(prefix))) {
-    return {
-      success: false,
-      message: "Username cannot start with 'google-' or 'github-'.",
-    };
-  }
-  try {
-    const existingUser = (await db.query.users.findFirst({
-      where: (users, { or, eq }) =>
-        or(eq(users.email, email), eq(users.username, username)),
-    })) as User | undefined;
-
-    if (existingUser) {
-      if (existingUser.email === email) {
-        return {
-          success: false,
-          message: "Email is already in use",
-        };
-      }
-      if (existingUser.username === username) {
-        return {
-          success: false,
-          message: "Username is already taken",
-        };
-      }
-    }
-
-    const hashedPassword = await hashPassword(password);
-    const newUser = {
-      username,
-      email,
-      password_hash: hashedPassword,
-    };
-
-    const insertedUser = await db
-      .insert(users)
-      .values(newUser)
-      .returning({ id: users.id });
-
-    const userId = insertedUser[0]?.id;
-    if (!userId) throw new Error("Failed to retrieve inserted user ID");
-
-    await sendEmail({
-      userId,
-      email,
+    let user = await db.query.users.findFirst({
+      where: eq(users.worldIdNullifier, verifyRes.nullifier_hash),
     });
 
+    if (!user) {
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          worldIdNullifier: verifyRes.nullifier_hash,
+        })
+        .returning();
+      user = newUser;
+    }
+
+    if (!user) {
+      throw new Error("Failed to create or find user.");
+    }
+
     const sessionToken = generateSessionToken();
-    const session = await createSession(sessionToken, userId);
+    const session = await createSession(sessionToken, user.id);
     await setSessionTokenCookie(sessionToken, session.expiresAt);
 
     return {
       success: true,
-      message: "Sign up successful",
+      message: "Login successful.",
     };
   } catch (e) {
+    console.error(`Login/Signup with World ID failed: ${e}`);
     return {
       success: false,
-      message: `Sign up failed: ${JSON.stringify(e)}`,
+      message: "An unexpected error occurred during the login process.",
     };
   }
 };
 
-export const signOutAction = async (): Promise<{
-  success: boolean;
-  message: string;
-}> => {
+export const signOutAction = async (): Promise<ActionResult> => {
   if (!globalGETRateLimit()) {
     return {
       success: false,
@@ -279,371 +137,38 @@ export const signOutAction = async (): Promise<{
     await deleteSessionTokenCookie();
     return {
       success: true,
-      message: "LoggingOut",
+      message: "Logging Out",
     };
   } catch (e) {
     return {
       success: false,
-      message: `Error LoggingOut ${e}`,
+      message: `Error Logging Out: ${e}`,
     };
   }
 };
 
-export async function verifyOTPAction(formData: FormData) {
-  if (!globalPOSTRateLimit()) {
-    return {
-      success: false,
-      message: "Too many requests",
-    };
-  }
-
-  try {
-    const { user } = await getCurrentSession();
-    if (!user) return;
-    const otpValues = [];
-    for (let i = 0; i < 8; i++) {
-      otpValues.push(formData.get(`otp[${i}]`) || "");
-    }
-    const otpValue = otpValues.join("");
-    const verificationRequest =
-      await db.query.emailVerificationRequests.findFirst({
-        where: and(
-          eq(emailVerificationRequests.userId, user.id),
-          eq(emailVerificationRequests.code, otpValue),
-        ),
-      });
-
-    if (!verificationRequest) {
-      await db
-        .delete(emailVerificationRequests)
-        .where(eq(emailVerificationRequests.userId, user.id));
-
-      return {
-        success: false,
-        message: "Invalid or expired verification code",
-      };
-    }
-
-    if (verificationRequest.expiresAt < new Date()) {
-      await db
-        .delete(emailVerificationRequests)
-        .where(eq(emailVerificationRequests.userId, user.id));
-
-      return {
-        success: false,
-        message: "Verification code has expired",
-      };
-    }
-
-    await db.update(users).set({ verified: true }).where(eq(users.id, user.id));
-    await db
-      .delete(emailVerificationRequests)
-      .where(eq(emailVerificationRequests.userId, user.id));
-
-    return {
-      success: true,
-      message: "Email verified successfully",
-    };
-  } catch (error) {
-    console.error("OTP Verification Error:", error);
-    return {
-      success: false,
-      message: "An unexpected error occurred",
-    };
-  }
-}
-
-export async function resendOTPAction() {
-  if (!globalGETRateLimit()) {
-    return {
-      success: false,
-      message: "Rate Limit",
-    };
-  }
-
-  const { user } = await getCurrentSession();
-  if (!user)
-    return {
-      success: false,
-      message: "Account Dosen't exist",
-    };
-  try {
-    await sendEmail({
-      userId: user.id,
-      email: user.email,
-    });
-
-    return {
-      success: true,
-      message: "New OTP has been sent to your email.",
-    };
-  } catch {
-    return {
-      success: false,
-      message: "Failed to resend OTP. Please try again.",
-    };
-  }
-}
-
-export async function forgotPasswordAction(
-  _: any,
-  formData: FormData,
-): Promise<ActionResult> {
-  if (!globalPOSTRateLimit()) {
-    return {
-      success: false,
-      message: "Rate Limit",
-    };
-  }
-
-  const email = formData.get("email") as string;
-  if (typeof email !== "string")
-    return {
-      success: false,
-      message: "Email is required",
-    };
-  if (!/^.+@.+\..+$/.test(email) && email.length < 256)
-    return {
-      success: false,
-      message: "Invalid email",
-    };
-
-  const existingUser: User | undefined = (await db.query.users.findFirst({
-    where: (users, { eq }) => eq(users.email, email),
-  })) as User | undefined;
-
-  if (!existingUser)
-    return {
-      success: false,
-      message: "User not found",
-    };
-
-  try {
-    await sendEmail({
-      userId: existingUser.id,
-      email: existingUser.email,
-    });
-
-    return {
-      success: true,
-      message: "OTP Sent",
-    };
-  } catch (e) {
-    return {
-      success: false,
-      message: `Error occured ${e}`,
-    };
-  }
-}
-
-export async function verifyOTPForgotPassword(formData: FormData) {
-  if (!globalPOSTRateLimit()) {
-    return {
-      success: false,
-      message: "Too many requests",
-    };
-  }
-
-  try {
-    const userEmail = formData.get("userEmail") as string;
-    if (!userEmail) {
-      return {
-        success: false,
-        message: "User email is missing",
-      };
-    }
-
-    const user = await db.query.users.findFirst({
-      where: eq(users.email, userEmail),
-    });
-
-    if (!user) {
-      return {
-        success: false,
-        message: "User not found",
-      };
-    }
-
-    const userId = user.id;
-
-    const otpValues = [];
-    for (let i = 0; i < 8; i++) {
-      otpValues.push((formData.get(`otp[${i}]`) as string) || "");
-    }
-    const otpValue = otpValues.join("");
-    const verificationRequest =
-      await db.query.emailVerificationRequests.findFirst({
-        where: and(
-          eq(emailVerificationRequests.userId, userId),
-          eq(emailVerificationRequests.code, otpValue),
-        ),
-      });
-
-    if (!verificationRequest) {
-      await db
-        .delete(emailVerificationRequests)
-        .where(eq(emailVerificationRequests.userId, userId));
-
-      return {
-        success: false,
-        message: "Invalid or expired verification code",
-      };
-    }
-
-    if (verificationRequest.expiresAt < new Date()) {
-      await db
-        .delete(emailVerificationRequests)
-        .where(eq(emailVerificationRequests.userId, userId));
-
-      return {
-        success: false,
-        message: "Verification code has expired",
-      };
-    }
-
-    await db
-      .delete(emailVerificationRequests)
-      .where(eq(emailVerificationRequests.userId, userId));
-
-    return {
-      success: true,
-      message: "Email verified successfully",
-    };
-  } catch (error) {
-    console.error("OTP Verification Error:", error);
-    return {
-      success: false,
-      message: "An unexpected error occurred",
-    };
-  }
-}
-
-export async function resendOTPForgotPassword(email: string) {
-  if (!globalPOSTRateLimit()) {
-    return {
-      success: false,
-      message: "Rate Limit",
-    };
-  }
-
-  try {
-    const user = await db.query.users.findFirst({
-      where: eq(users.email, email),
-    });
-
-    if (!user) {
-      return {
-        success: false,
-        message: "User not found",
-      };
-    }
-
-    await sendEmail({
-      userId: user.id,
-      email: email,
-    });
-
-    return {
-      success: true,
-      message: "New OTP has been sent to your email.",
-    };
-  } catch {
-    return {
-      success: false,
-      message: "Failed to resend OTP. Please try again.",
-    };
-  }
-}
-
-export async function resetPasswordAction(
-  _: any,
-  formData: FormData,
-): Promise<ActionResult> {
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-  const confirmPassword = formData.get("confirmPassword") as string;
-
-  if (!email || !password || !confirmPassword) {
-    return {
-      success: false,
-      message: "Missing required fields",
-    };
-  }
-
-  if (password !== confirmPassword) {
-    return {
-      success: false,
-      message: "Passwords don't match",
-    };
-  }
-
-  try {
-    const user = await db.query.users.findFirst({
-      where: eq(users.email, email),
-    });
-
-    if (!user) {
-      return {
-        success: false,
-        message: "User not found",
-      };
-    }
-
-    const strongPassword = await verifyPasswordStrength(password);
-    if (!strongPassword)
-      return {
-        success: false,
-        message: "Weak Password",
-      };
-
-    const hashedPassword = await hashPassword(password);
-
-    await db
-      .update(users)
-      .set({
-        password_hash: hashedPassword,
-      })
-      .where(eq(users.email, email));
-
-    return {
-      success: true,
-      message: "Password successfully reset",
-    };
-  } catch (error) {
-    console.error("Error resetting password:", error);
-    return {
-      success: false,
-      message: "An error occurred. Please try again.",
-    };
-  }
-}
-
 export const changeUsernameAction = async (
   _: any,
   formData: FormData,
-): Promise<{
-  success: boolean;
-  message: string;
-}> => {
-  const username = formData.get("username");
-  if (typeof username !== "string")
+): Promise<ActionResult> => {
+  if (!globalPOSTRateLimit()) {
     return {
       success: false,
-      message: "username is required",
-    };
-
-  if (username.includes(" ")) {
-    return {
-      success: false,
-      message: "Username should not contain spaces.",
+      message: "Too many requests",
     };
   }
 
-  const disallowedPrefixes = ["google-", "github-"];
-  if (disallowedPrefixes.some((prefix) => username.startsWith(prefix))) {
+  const username = formData.get("username") as string;
+  if (!username || typeof username !== "string")
     return {
       success: false,
-      message: "Username cannot start with 'google-' or 'github-'.",
+      message: "Username is required",
+    };
+
+  if (username.length < 3) {
+    return {
+      success: false,
+      message: "Username must be at least 3 characters long.",
     };
   }
 
@@ -658,8 +183,7 @@ export const changeUsernameAction = async (
     await db
       .update(users)
       .set({ username: username })
-      .where(eq(users.email, user.email))
-      .returning();
+      .where(eq(users.id, user.id));
 
     revalidatePath("/");
     revalidatePath("/dashboard");
@@ -677,14 +201,14 @@ export const changeUsernameAction = async (
     }
     return {
       success: false,
-      message: `${e}`,
+      message: "An unexpected error occurred while setting the username.",
     };
   }
 };
 
 export async function uploadFile(fd: FormData): Promise<ActionResult> {
   const { session, user } = await getCurrentSession();
-  if (session === null)
+  if (session === null || !user)
     return {
       success: false,
       message: "Not Logged in",
@@ -722,25 +246,19 @@ export const addFriendAction = async (
   if (!user) {
     return {
       success: false,
-      message: "not logged in",
+      message: "Not logged in",
     };
   }
-  const receiverEmail = formData.get("friend-email") as string;
-  if (typeof receiverEmail !== "string") {
+  const receiverUsername = formData.get("friend-username") as string;
+  if (!receiverUsername || typeof receiverUsername !== "string") {
     return {
       success: false,
-      message: "Invalid email",
-    };
-  }
-  if (!validateEmail({ email: receiverEmail })) {
-    return {
-      success: false,
-      message: "Invalid email",
+      message: "Invalid username",
     };
   }
   try {
     const friend: User | undefined = await db.query.users.findFirst({
-      where: (users, { eq }) => eq(users.email, receiverEmail),
+      where: (users, { eq }) => eq(users.username, receiverUsername),
     });
 
     if (!friend) {
@@ -775,39 +293,35 @@ export const addFriendAction = async (
           ),
       });
 
-    if (existingRequest)
-      if (existingRequest.status === "pending") {
-        return {
-          success: false,
-          message: "Friend request already sent",
-        };
-      } else {
-        return {
-          success: false,
-          message: "You are already friends with this user",
-        };
-      }
-    const channelName = toPusherKey(`private-user:${friend.id}`);
-    const eventName = "incoming_friend_request";
+    if (existingRequest) {
+      return {
+        success: false,
+        message:
+          existingRequest.status === "pending"
+            ? "Friend request already sent"
+            : "You are already friends with this user",
+      };
+    }
 
-    pusherServer.trigger(channelName, eventName, {
-      senderId: user.id,
-      senderEmail: user.email,
-      senderName: user.username,
-      senderImage: user.picture,
-    });
+    await pusherServer.trigger(
+      toPusherKey(`private-user:${friend.id}`),
+      "incoming_friend_request",
+      {
+        senderId: user.id,
+        senderName: user.username,
+        senderImage: user.picture,
+      },
+    );
 
-    const newFriendRequest = {
+    await db.insert(friendRequests).values({
       requesterId: user.id,
       recipientId: friend.id,
       status: friendReqStatusEnum.enumValues[0],
-    };
-
-    await db.insert(friendRequests).values(newFriendRequest);
+    });
 
     return { success: true, message: "Friend request sent" };
   } catch (_e) {
-    return { success: false, message: "unexpected error check Server logs" };
+    return { success: false, message: "Unexpected error. Check server logs." };
   }
 };
 
@@ -916,7 +430,7 @@ export const sendMessageAction = async ({
 }: {
   senderDeviceId: number;
   encryptedContent: Record<number, string>;
-  sender: Omit<User, "password">;
+  sender: Omit<User, "password_hash">;
   receiver: User;
 }): Promise<
   | {
@@ -1110,11 +624,6 @@ export async function getVerifiedDeviceIdsForContact(
   return verifications.map((v) => v.verifiedDeviceId);
 }
 
-/**
- * Marks a set of devices as trusted by the current user.
- * @param deviceIdsToVerify An array of device IDs to mark as verified.
- * @returns ActionResult indicating success or failure.
- */
 export async function verifyDevicesAction(
   deviceIdsToVerify: number[],
 ): Promise<ActionResult> {
@@ -1133,7 +642,6 @@ export async function verifyDevicesAction(
       verifiedDeviceId: deviceId,
     }));
 
-    // 'onConflictDoNothing' handles cases where a device is already verified.
     await db
       .insert(deviceVerifications)
       .values(valuesToInsert)

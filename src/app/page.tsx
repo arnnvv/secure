@@ -4,13 +4,12 @@ import { getCurrentSession } from "@/actions";
 
 export default async function Home(): Promise<JSX.Element> {
   const { user, session } = await getCurrentSession();
-  if (session === null) return redirect("/login");
-  if (!user.verified) return redirect("/email-verification");
 
-  if (
-    user.username.startsWith("google-") ||
-    user.username.startsWith("github-")
-  ) {
+  if (session === null) {
+    return redirect("/login");
+  }
+
+  if (!user.username) {
     return redirect("/get-username");
   }
 
