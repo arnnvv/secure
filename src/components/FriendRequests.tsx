@@ -10,12 +10,10 @@ import { toPusherKey } from "@/lib/utils";
 interface IncomingFriendRequest {
   id: number;
   username: string;
-  email: string;
 }
 
 interface PusherPayload {
   senderId: number;
-  senderEmail: string;
   senderName: string;
 }
 
@@ -34,12 +32,11 @@ export const FriendRequests = ({
     pusherClient.subscribe(channelName);
 
     const friendReqHandler = (payload: PusherPayload): void => {
-      const { senderId, senderEmail, senderName } = payload;
+      const { senderId, senderName } = payload;
       setFriendReqs((prevReqs) => [
         ...prevReqs,
         {
           id: senderId,
-          email: senderEmail,
           username: senderName,
         },
       ]);
@@ -82,9 +79,7 @@ export const FriendRequests = ({
         friendReqs.map((friendReq) => (
           <div key={friendReq.id} className="flex gap-4 items-center">
             <UserPlus className="text-black" />
-            <p className="font-medium text-lg">
-              {friendReq.username || friendReq.email}
-            </p>
+            <p className="font-medium text-lg">{friendReq.username}</p>
             <button
               type="button"
               onClick={() => handleAccept(friendReq.id)}

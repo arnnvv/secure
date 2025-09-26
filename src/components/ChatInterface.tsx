@@ -60,8 +60,8 @@ export default function ChatInterface({
                 <AvatarImage src={chatPartner.picture || ""} />
                 <AvatarFallback>
                   {chatPartner.username
-                    ? chatPartner.username[0]
-                    : chatPartner.email[0]}
+                    ? chatPartner.username[0].toUpperCase()
+                    : "?"}
                 </AvatarFallback>
               </Avatar>
             </div>
@@ -72,7 +72,6 @@ export default function ChatInterface({
                 {chatPartner.username}
               </span>
             </div>
-            <span className="text-sm text-gray-600">{chatPartner.email}</span>
           </div>
         </div>
       </div>

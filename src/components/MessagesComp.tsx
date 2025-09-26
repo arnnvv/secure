@@ -55,9 +55,7 @@ function ChatMessage({
               }
             />
             <AvatarFallback>
-              {chatPartner.username
-                ? chatPartner.username[0]
-                : chatPartner.email[0]}
+              {chatPartner.username ? chatPartner.username[0] : "?"}
             </AvatarFallback>
           </Avatar>
         </div>

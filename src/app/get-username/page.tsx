@@ -10,12 +10,10 @@ import { Label } from "@/components/ui/label";
 export default async function GetUsername(): Promise<JSX.Element> {
   const { session, user } = await getCurrentSession();
   if (session === null) return redirect("/login");
-  if (
-    !(
-      user.username.startsWith("google-") || user.username.startsWith("github-")
-    )
-  )
+
+  if (user.username) {
     return redirect("/");
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">

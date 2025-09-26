@@ -165,7 +165,7 @@ export const SidebarChatList = ({
   return (
     <ul className="max-h-[25rem] overflow-y-auto -mx-2 space-y-1">
       {activeChats
-        .sort((a, b) => a.username.localeCompare(b.username))
+        .sort((a, b) => (a.username || "").localeCompare(b.username || ""))
         .map((friend) => {
           const unseenMsgCount = unseenMessagesCount[friend.id] || 0;
           return (
@@ -180,10 +180,10 @@ export const SidebarChatList = ({
                 <Avatar>
                   <AvatarImage src={friend.picture || ""} />
                   <AvatarFallback>
-                    {friend.username ? friend.username[0] : friend.email[0]}
+                    {friend.username ? friend.username[0].toUpperCase() : "?"}
                   </AvatarFallback>
                 </Avatar>
-                {friend.username ? friend.username : friend.email}{" "}
+                {friend.username}
                 {unseenMsgCount > 0 && (
                   <div className="border-r-cyan-400 font-medium text-xs w-5 h-5 rounded-full flex justify-center items-center bg-cyan-400 text-white">
                     {unseenMsgCount}

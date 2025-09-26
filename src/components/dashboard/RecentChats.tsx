@@ -49,7 +49,7 @@ export async function RecentChats() {
             <Avatar className="w-8 h-8">
               <AvatarImage src={friend?.picture || "/default-avatar.png"} />
               <AvatarFallback>
-                {friend.username ? friend.username[0] : friend.email[0]}
+                {friend.username ? friend.username[0].toUpperCase() : "?"}
               </AvatarFallback>
             </Avatar>
           </div>
