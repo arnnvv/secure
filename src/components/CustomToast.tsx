@@ -1,7 +1,6 @@
 import type { JSX } from "react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { cn } from "@/lib/utils";
 
 const ToastContent = ({
   senderName,
@@ -27,29 +26,21 @@ const ToastContent = ({
 );
 
 export const CustomToast = ({
-  t,
+  toastId,
   href,
   senderName,
   senderMessage,
   image,
 }: {
-  t: {
-    id: string | number;
-    visible: boolean;
-  };
+  toastId: string | number;
   href: string;
   senderName: string;
   senderMessage: string;
   image: string | null;
 }): JSX.Element => (
-  <div
-    className={cn(
-      "max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex items-center ring-1 ring-black ring-opacity-5 z-50",
-      { "animate-enter": t.visible, "animate-leave": !t.visible },
-    )}
-  >
+  <div className="max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex items-center ring-1 ring-black ring-opacity-5 z-50">
     <a
-      onClick={(): string | number => toast.dismiss(t.id)}
+      onClick={(): string | number => toast.dismiss(toastId)}
       href={href}
       className="flex-grow p-4"
     >
@@ -62,7 +53,7 @@ export const CustomToast = ({
     <div className="flex-shrink-0 border-l border-gray-200">
       <button
         type="button"
-        onMouseDown={(): string | number => toast.dismiss(t.id)}
+        onMouseDown={(): string | number => toast.dismiss(toastId)}
         className="h-full px-4 py-2 text-sm font-medium text-cyan-400 hover:text-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-400"
       >
         Close

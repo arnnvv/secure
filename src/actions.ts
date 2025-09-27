@@ -86,17 +86,26 @@ export const changeUsernameAction = async (
     };
   }
 
-  const username = formData.get("username") as string;
-  if (!username || typeof username !== "string")
+  const usernameRaw = formData.get("username") as string;
+  if (!usernameRaw || typeof usernameRaw !== "string")
     return {
       success: false,
       message: "Username is required",
     };
 
+  const username = usernameRaw.trim().toLowerCase();
+
   if (username.length < 3) {
     return {
       success: false,
       message: "Username must be at least 3 characters long.",
+    };
+  }
+
+  if (/\s/.test(username)) {
+    return {
+      success: false,
+      message: "Username cannot contain spaces.",
     };
   }
 
@@ -190,14 +199,16 @@ export const addFriendAction = async (
       message: "Not logged in",
     };
   }
-  const receiverUsername = formData.get("friend-username") as string;
-  if (!receiverUsername || typeof receiverUsername !== "string") {
+  const receiverUsernameRaw = formData.get("friend-username") as string;
+  if (!receiverUsernameRaw || typeof receiverUsernameRaw !== "string") {
     return {
       success: false,
       message: "Invalid username",
     };
   }
   try {
+    const receiverUsername = receiverUsernameRaw.trim().toLowerCase();
+
     const friend: User | undefined = await db.query.users.findFirst({
       where: (users, { eq }) => eq(users.username, receiverUsername),
     });
@@ -303,11 +314,6 @@ export const acceptFriendRequest = async (
         toPusherKey(`private-user:${friendRequestId}`),
         "new_friend",
         user,
-      ),
-      pusherServer.trigger(
-        toPusherKey(`private-user:${sessionId}`),
-        "new_friend",
-        friendRequester,
       ),
       db
         .update(friendRequests)

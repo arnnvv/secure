@@ -41,9 +41,9 @@ export const SidebarChatList = ({
       if (!shouldNotify) return;
 
       toast.custom(
-        (t: any): JSX.Element => (
+        (toastId: string | number): JSX.Element => (
           <CustomToast
-            t={t}
+            toastId={toastId}
             href={`/dashboard/chat/${chatHrefConstructor(
               sessionId,
               payload.senderId,
@@ -63,6 +63,7 @@ export const SidebarChatList = ({
 
     const newFriendHandler = (newFriend: User) => {
       setActiveChats((prev) => [...prev, newFriend]);
+      toast.info(`${newFriend.username} has accepted your friend request!`);
     };
 
     pusherClient.bind("new_message_notification", newMessageHandler);

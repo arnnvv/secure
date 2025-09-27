@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, UserPlus, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { type JSX, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { acceptFriendRequest, rejectFriendRequest } from "@/actions";
@@ -24,6 +25,7 @@ export const FriendRequests = ({
   incommingFriendReqs: IncomingFriendRequest[];
   sessionId: number;
 }): JSX.Element => {
+  const router = useRouter();
   const [friendReqs, setFriendReqs] =
     useState<IncomingFriendRequest[]>(incommingFriendReqs);
 
@@ -52,22 +54,31 @@ export const FriendRequests = ({
   }, [sessionId]);
 
   const handleAccept = async (senderId: number) => {
+    const previousRequests = [...friendReqs];
+    setFriendReqs((prev) => prev.filter((req) => req.id !== senderId));
+
     const res = await acceptFriendRequest(senderId, sessionId);
+
     if ("error" in res) {
       toast.error(res.error);
+      setFriendReqs(previousRequests);
     } else {
       toast.success(res.message);
-      setFriendReqs((prev) => prev.filter((req) => req.id !== senderId));
+      router.refresh();
     }
   };
 
   const handleReject = async (senderId: number) => {
+    const previousRequests = [...friendReqs];
+    setFriendReqs((prev) => prev.filter((req) => req.id !== senderId));
+
     const res = await rejectFriendRequest(senderId, sessionId);
+
     if ("error" in res) {
       toast.error(res.error);
+      setFriendReqs(previousRequests);
     } else {
       toast.success(res.message);
-      setFriendReqs((prev) => prev.filter((req) => req.id !== senderId));
     }
   };
 

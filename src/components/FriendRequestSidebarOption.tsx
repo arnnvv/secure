@@ -12,7 +12,6 @@ import { CustomToast } from "./CustomToast";
 interface FriendRequestPayload {
   senderId: number;
   senderName: string;
-  senderEmail: string;
   senderImage: string | null;
 }
 
@@ -23,22 +22,26 @@ export const FriendRequestSidebarOption = ({
   sessionId: number;
   initialUnseenFriendRequests: number;
 }): JSX.Element => {
-  const [unsceenReq, setUnsceenReq] = useState<number>(
+  const [unseenReqCount, setUnseenReqCount] = useState<number>(
     initialUnseenFriendRequests,
   );
   const pathname = usePathname();
+
+  useEffect(() => {
+    if (pathname === "/dashboard/requests") {
+      setUnseenReqCount(0);
+    }
+  }, [pathname]);
 
   useEffect(() => {
     const channelName = toPusherKey(`private-user:${sessionId}`);
     pusherClient.subscribe(channelName);
 
     const friendReqHandler = (payload: FriendRequestPayload): void => {
-      setUnsceenReq((prev: number): number => prev + 1);
-
       if (pathname !== "/dashboard/requests") {
-        toast.custom((t: any) => (
+        toast.custom((toastId) => (
           <CustomToast
-            t={t}
+            toastId={toastId}
             href="/dashboard/requests"
             senderName={payload.senderName}
             senderMessage="Sent you a friend request"
@@ -46,19 +49,14 @@ export const FriendRequestSidebarOption = ({
           />
         ));
       }
-    };
-
-    const addedFriendHandler = (): void => {
-      setUnsceenReq((prev: number): number => prev - 1);
+      setUnseenReqCount((prev) => prev + 1);
     };
 
     pusherClient.bind("incoming_friend_request", friendReqHandler);
-    pusherClient.bind("new_friend", addedFriendHandler);
 
     return () => {
       pusherClient.unsubscribe(channelName);
       pusherClient.unbind("incoming_friend_request", friendReqHandler);
-      pusherClient.unbind("new_friend", addedFriendHandler);
     };
   }, [sessionId, pathname]);
 
@@ -72,9 +70,9 @@ export const FriendRequestSidebarOption = ({
       </div>
       <p className="truncate">Friend requests</p>
 
-      {unsceenReq > 0 ? (
+      {unseenReqCount > 0 ? (
         <div className="rounded-full w-5 h-5 text-xs flex justify-center items-center text-white bg-indigo-600">
-          {unsceenReq}
+          {unseenReqCount}
         </div>
       ) : null}
     </Link>
