@@ -111,10 +111,20 @@ function DecryptedChatMessage({
 function PaymentMessage({
   message,
   measureElement,
+  isCurrentUser,
+  chatPartner,
 }: {
   message: Message;
   measureElement: (element: HTMLElement | null) => void;
+  isCurrentUser: boolean;
+  chatPartner: User;
 }) {
+  const paymentText = message.content; // e.g., "Sent 0.5 WLD"
+
+  const fullText = isCurrentUser
+    ? `You ${paymentText.toLowerCase()}`
+    : `${chatPartner.username} ${paymentText.toLowerCase()}`;
+
   return (
     <div ref={measureElement} className="flex justify-center items-center my-2">
       <div
@@ -123,9 +133,7 @@ function PaymentMessage({
         )}
       >
         <DollarSign className="h-4 w-4 flex-shrink-0" />
-        <span className="text-xs sm:text-sm font-medium">
-          {message.content}
-        </span>
+        <span className="text-xs sm:text-sm font-medium">{fullText}</span>
       </div>
     </div>
   );
@@ -266,6 +274,8 @@ export const MessagesComp = ({
                     ...message,
                     content: message.content.substring("PAYMENT::".length),
                   }}
+                  isCurrentUser={isCurrentUser}
+                  chatPartner={chatPartner}
                 />
               ) : (
                 <DecryptedChatMessage
