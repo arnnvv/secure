@@ -7,6 +7,7 @@ import { type JSX, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { getPaginatedMessages } from "@/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { decryptMessage } from "@/lib/crypto";
 import type { Message, User } from "@/lib/db/schema";
 import { pusherClient } from "@/lib/pusher-client";
 import { cn, toPusherKey } from "@/lib/utils";
@@ -79,18 +80,48 @@ function ChatMessage({
   );
 }
 
+function DecryptedChatMessage({
+  message,
+  sharedKey,
+  ...rest
+}: {
+  message: Message;
+  sharedKey: CryptoKey;
+} & Omit<Parameters<typeof ChatMessage>[0], "message">) {
+  const [decryptedContent, setDecryptedContent] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    decryptMessage(sharedKey, message.content).then((content) => {
+      if (isMounted) setDecryptedContent(content);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [message, sharedKey]);
+
+  const displayMessage = {
+    ...message,
+    content: decryptedContent ?? "Decrypting...",
+  };
+
+  return <ChatMessage message={displayMessage} {...rest} />;
+}
+
 export const MessagesComp = ({
   chatId,
   chatPartner,
   sessionImg,
   sessionId,
   initialMessages,
+  sharedKey,
 }: {
   chatId: string;
   chatPartner: User;
   sessionId: number;
   sessionImg: string | null | undefined;
   initialMessages: Message[];
+  sharedKey: CryptoKey;
 }): JSX.Element => {
   const parentRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Message[]>(initialMessages);
@@ -204,13 +235,14 @@ export const MessagesComp = ({
                 transform: `translateY(${virtualRow.start}px)`,
               }}
             >
-              <ChatMessage
+              <DecryptedChatMessage
                 measureElement={virtualizer.measureElement}
                 message={message}
                 isCurrentUser={isCurrentUser}
                 hasNxtMessage={hasNxtMessage}
                 chatPartner={chatPartner}
                 sessionImg={sessionImg}
+                sharedKey={sharedKey}
               />
             </div>
           );

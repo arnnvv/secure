@@ -582,3 +582,51 @@ export const recordPaymentAction = async ({
     return { error: `Failed to record payment: ${errorMessage}` };
   }
 };
+
+export const storePublicKeyAction = async (
+  publicKey: string,
+  deviceId: number,
+): Promise<ActionResult> => {
+  const { user } = await getCurrentSession();
+  if (!user) {
+    return { success: false, message: "Not authenticated" };
+  }
+
+  try {
+    const device = await db.query.devices.findFirst({
+      where: and(eq(devices.id, deviceId), eq(devices.userId, user.id)),
+    });
+
+    if (!device) {
+      return { success: false, message: "Device not found" };
+    }
+
+    await db.update(devices).set({ publicKey }).where(eq(devices.id, deviceId));
+
+    return { success: true, message: "Public key stored" };
+  } catch (e) {
+    return { success: false, message: `Error storing public key: ${e}` };
+  }
+};
+
+export const getPublicKeyAction = async (
+  userId: number,
+): Promise<{ publicKey: string | null; error?: string }> => {
+  const { user: sessionUser } = await getCurrentSession();
+  if (!sessionUser) {
+    return { publicKey: null, error: "Not authenticated" };
+  }
+
+  try {
+    const device = await db.query.devices.findFirst({
+      where: eq(devices.userId, userId),
+    });
+
+    if (!device || !device.publicKey || device.publicKey === "unused") {
+      return { publicKey: null, error: "Public key not found for this user." };
+    }
+    return { publicKey: device.publicKey };
+  } catch (e) {
+    return { publicKey: null, error: "Database error fetching public key." };
+  }
+};

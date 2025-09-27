@@ -43,6 +43,10 @@ export default function LoginPage() {
           );
         }
 
+        if (result.data?.deviceId) {
+          localStorage.setItem("deviceId", result.data.deviceId);
+        }
+
         toast.success("Successfully signed in. Redirecting...");
         window.location.href = "/";
       } else {

@@ -1,13 +1,17 @@
 "use client";
 
 import { DollarSign } from "lucide-react";
-import { type JSX, useState } from "react";
+import { type JSX, useEffect, useState } from "react";
+import { toast } from "sonner";
+import { getPublicKeyAction } from "@/actions";
 import { ChatInput } from "@/components/ChatInput";
 import { MessagesComp } from "@/components/MessagesComp";
 import { PaymentModal } from "@/components/PaymentModal";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { deriveSharedSecret } from "@/lib/crypto";
 import type { Message, User } from "@/lib/db/schema";
+import { useE2EE } from "./E2EEProvider";
 
 interface ChatInterfaceProps {
   chatId: string;
@@ -23,6 +27,41 @@ export default function ChatInterface({
   initialMessages,
 }: ChatInterfaceProps): JSX.Element {
   const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
+  const { keyPair, isReady } = useE2EE();
+  const [sharedKey, setSharedKey] = useState<CryptoKey | null>(null);
+
+  useEffect(() => {
+    if (!isReady || !keyPair) return;
+
+    const deriveKey = async () => {
+      try {
+        const { publicKey, error } = await getPublicKeyAction(chatPartner.id);
+        if (error || !publicKey) {
+          toast.error(
+            `Could not get public key for ${chatPartner.username}. Messages may not be secure.`,
+          );
+          console.error(error);
+          return;
+        }
+
+        const derived = await deriveSharedSecret(keyPair.privateKey, publicKey);
+        setSharedKey(derived);
+      } catch (err) {
+        console.error("Failed to derive shared key:", err);
+        toast.error("Failed to establish secure connection.");
+      }
+    };
+
+    deriveKey();
+  }, [isReady, keyPair, chatPartner.id, chatPartner.username]);
+
+  if (!isReady) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        Initializing encryption...
+      </div>
+    );
+  }
 
   return (
     <>
@@ -56,7 +95,6 @@ export default function ChatInterface({
               </div>
             </div>
           </div>
-
           <Button
             variant="outline"
             onClick={() => setPaymentModalOpen(true)}
@@ -67,14 +105,27 @@ export default function ChatInterface({
           </Button>
         </div>
 
-        <MessagesComp
-          chatId={chatId}
-          chatPartner={chatPartner}
-          sessionImg={sessionUser.picture}
-          sessionId={sessionUser.id}
-          initialMessages={initialMessages}
-        />
-        <ChatInput sender={sessionUser} receiver={chatPartner} />
+        {sharedKey ? (
+          <>
+            <MessagesComp
+              chatId={chatId}
+              chatPartner={chatPartner}
+              sessionImg={sessionUser.picture}
+              sessionId={sessionUser.id}
+              initialMessages={initialMessages}
+              sharedKey={sharedKey}
+            />
+            <ChatInput
+              sender={sessionUser}
+              receiver={chatPartner}
+              sharedKey={sharedKey}
+            />
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center">
+            <p className="text-zinc-500">Establishing secure channel...</p>
+          </div>
+        )}
       </div>
     </>
   );

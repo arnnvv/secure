@@ -13,14 +13,17 @@ import ReactTextareaAutosize from "react-textarea-autosize";
 import { toast } from "sonner";
 import { sendMessageAction } from "@/actions";
 import { Button } from "@/components/ui/button";
+import { encryptMessage } from "@/lib/crypto";
 import type { User } from "@/lib/db/schema";
 
 export const ChatInput = ({
   sender,
   receiver,
+  sharedKey,
 }: {
   sender: Omit<User, "password">;
   receiver: User;
+  sharedKey: CryptoKey;
 }): JSX.Element => {
   const textareaRef: RefObject<HTMLTextAreaElement | null> =
     useRef<HTMLTextAreaElement | null>(null);
@@ -36,8 +39,10 @@ export const ChatInput = ({
     setIsLoading(true);
 
     try {
+      const encryptedContent = await encryptMessage(sharedKey, input);
+
       const res = await sendMessageAction({
-        content: input,
+        content: encryptedContent,
         sender,
         receiver,
       });
