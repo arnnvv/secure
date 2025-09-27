@@ -1,10 +1,5 @@
 "use server";
 
-import {
-  type ISuccessResult,
-  VerificationLevel,
-  verifyCloudProof,
-} from "@worldcoin/idkit";
 import { and, desc, eq, inArray, lt, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
@@ -50,115 +45,6 @@ export const getCurrentSession = cache(
     return result;
   },
 );
-
-export const verifyAndLoginAction = async (
-  proof: ISuccessResult,
-): Promise<ActionResult> => {
-  console.log("\x1b[36m[START] verifyAndLoginAction called\x1b[0m");
-  console.log("\x1b[34m[INPUT] Proof received:\x1b[0m", proof);
-
-  if (!globalPOSTRateLimit()) {
-    console.log("\x1b[31m[RATE LIMIT] Too many requests detected\x1b[0m");
-    return {
-      success: false,
-      message: "Too many requests",
-    };
-  }
-  console.log("\x1b[32m[RATE LIMIT] Passed\x1b[0m");
-
-  console.log("\x1b[36m[VERIFY] Calling verifyCloudProof...\x1b[0m");
-  const verifyRes = await verifyCloudProof(
-    proof,
-    process.env.NEXT_PUBLIC_WLD_APP_ID as `app_${string}`,
-    process.env.NEXT_PUBLIC_WLD_ACTION_NAME!,
-    "login",
-  );
-  console.log("\x1b[34m[VERIFY RESULT]\x1b[0m", verifyRes);
-
-  if (!verifyRes.success) {
-    console.log("\x1b[31m[VERIFY FAILED] Reason:\x1b[0m", verifyRes.detail);
-    return {
-      success: false,
-      message: verifyRes.detail ?? "Proof verification failed.",
-    };
-  }
-  console.log("\x1b[32m[VERIFY PASSED] Proof successfully verified\x1b[0m");
-
-  console.log("\x1b[36m[CHECK] Verification level...\x1b[0m");
-  if (proof.verification_level !== VerificationLevel.Orb) {
-    console.log(
-      "\x1b[31m[CHECK FAILED] Non-Orb level provided:\x1b[0m",
-      proof.verification_level,
-    );
-    return {
-      success: false,
-      message: "Orb-level verification is required for this action.",
-    };
-  }
-  console.log("\x1b[32m[CHECK PASSED] Orb-level verified\x1b[0m");
-
-  try {
-    console.log(
-      "\x1b[36m[DB QUERY] Looking for user with nullifier:\x1b[0m",
-      proof.nullifier_hash,
-    );
-    let user = await db.query.users.findFirst({
-      where: eq(users.worldIdNullifier, proof.nullifier_hash),
-    });
-
-    if (!user) {
-      console.log(
-        "\x1b[33m[DB MISS] No user found. Inserting new user...\x1b[0m",
-      );
-      const [newUser] = await db
-        .insert(users)
-        .values({
-          worldIdNullifier: proof.nullifier_hash,
-        })
-        .returning();
-      console.log("\x1b[32m[DB INSERT] User created:\x1b[0m", newUser);
-      user = newUser;
-    } else {
-      console.log("\x1b[32m[DB HIT] Existing user found:\x1b[0m", user);
-    }
-
-    if (!user) {
-      console.log(
-        "\x1b[31m[DB ERROR] User is still undefined after insert/find\x1b[0m",
-      );
-      throw new Error("Failed to create or find user.");
-    }
-
-    console.log("\x1b[36m[SESSION] Generating session token...\x1b[0m");
-    const sessionToken = generateSessionToken();
-    console.log("\x1b[34m[SESSION TOKEN]\x1b[0m", sessionToken);
-
-    console.log("\x1b[36m[SESSION] Creating session in DB...\x1b[0m");
-    const session = await createSession(sessionToken, user.id);
-    console.log("\x1b[32m[SESSION CREATED]\x1b[0m", session);
-
-    console.log("\x1b[36m[COOKIE] Setting session cookie...\x1b[0m");
-    await setSessionTokenCookie(sessionToken, session.expiresAt);
-    console.log(
-      "\x1b[32m[COOKIE SET] Cookie expires at:\x1b[0m",
-      session.expiresAt,
-    );
-
-    console.log("\x1b[32m[SUCCESS] Login successful\x1b[0m");
-    return {
-      success: true,
-      message: "Login successful.",
-    };
-  } catch (e) {
-    console.log("\x1b[31m[ERROR] Login/Signup with World ID failed:\x1b[0m", e);
-    return {
-      success: false,
-      message: "An unexpected error occurred during the login process.",
-    };
-  } finally {
-    console.log("\x1b[36m[END] verifyAndLoginAction finished\x1b[0m");
-  }
-};
 
 export const signOutAction = async (): Promise<ActionResult> => {
   if (!globalGETRateLimit()) {
@@ -750,3 +636,42 @@ export async function verifyDevicesAction(
     return { success: false, message: "An unexpected error occurred." };
   }
 }
+
+export const completeWalletAuthAction = async (
+  walletAddress: string,
+): Promise<ActionResult> => {
+  try {
+    let user = await db.query.users.findFirst({
+      where: eq(users.walletAddress, walletAddress),
+    });
+
+    if (!user) {
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          walletAddress: walletAddress.toLowerCase(),
+        })
+        .returning();
+      user = newUser;
+    }
+
+    if (!user) {
+      throw new Error("Failed to create or find user in the database.");
+    }
+
+    const sessionToken = generateSessionToken();
+    const session = await createSession(sessionToken, user.id);
+    await setSessionTokenCookie(sessionToken, session.expiresAt);
+
+    return {
+      success: true,
+      message: "Session created successfully.",
+    };
+  } catch (e) {
+    console.error(`Wallet auth completion failed: ${e}`);
+    return {
+      success: false,
+      message: "An unexpected error occurred while creating your user session.",
+    };
+  }
+};

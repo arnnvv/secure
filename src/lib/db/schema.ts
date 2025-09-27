@@ -23,7 +23,7 @@ export const friendReqStatusEnum = pgEnum("friend_req_status", [
 
 export const users = createTable("users", {
   id: serial("id").primaryKey(),
-  worldIdNullifier: text("world_id_nullifier").unique().notNull(),
+  walletAddress: varchar("wallet_address", { length: 42 }).unique().notNull(),
   username: varchar("username").unique(),
   picture: text("picture"),
 });

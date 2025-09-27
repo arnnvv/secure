@@ -107,7 +107,7 @@ export const getFriendsWithLastMessage = async (
       id: row.friend_id,
       username: row.username,
       picture: row.picture,
-      worldIdNullifier: row.worldIdNullifier,
+      walletAddress: row.walletAddress,
       devices: row.devices || [],
       lastMessage: row.lastMessageId
         ? {
