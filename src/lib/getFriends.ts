@@ -54,7 +54,7 @@ export const getFriendsWithLastMessage = async (
           ELSE requester_id
         END AS friend_id
       FROM chat_friend_requests
-      WHERE (${userId} IN (requester_id, recipient_id)) AND status = 'accepted'
+      WHERE (requester_id = ${userId} OR recipient_id = ${userId}) AND status = 'accepted'
     ) AS f
     JOIN chat_users u ON f.friend_id = u.id
     LEFT JOIN LATERAL (
