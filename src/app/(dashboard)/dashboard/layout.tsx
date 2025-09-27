@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { type JSX, type ReactNode, Suspense } from "react";
 import Skeleton from "react-loading-skeleton";
-import { DeviceSetupCheck } from "@/components/DeviceSetupCheck";
 import { DynamicFriendRequestOption } from "@/components/dashboard/DynamicFriendRequestOption";
 import {
   ChatListSkeleton,
@@ -87,11 +86,9 @@ export default function DashboardLayout({
           </ul>
         </nav>
       </div>
-      <DeviceSetupCheck>
-        <aside className="max-h-screen container py-16 md:py-12 w-full">
-          {children}
-        </aside>
-      </DeviceSetupCheck>
+      <aside className="max-h-screen container py-16 md:py-12 w-full">
+        {children}
+      </aside>
     </div>
   );
 }

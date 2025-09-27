@@ -1,23 +1,23 @@
 "use client";
 
 import { MiniKit } from "@worldcoin/minikit-js";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
-  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
 
   const signInWithWallet = async () => {
     if (!MiniKit.isInstalled()) {
-      toast.error("This feature is only available within the World App.", {
-        description: "Please open this app inside World App to log in.",
-      });
+      toast.error("This feature is only available within the World App.");
       return;
     }
 
+    setIsLoading(true);
     try {
       const res = await fetch(`/api/nonce`);
-      if (!res.ok) throw new Error("Failed to fetch nonce.");
+      if (!res.ok) throw new Error("Failed to fetch nonce from server.");
       const { nonce } = await res.json();
 
       const { finalPayload } = await MiniKit.commandsAsync.walletAuth({
@@ -33,13 +33,15 @@ export default function LoginPage() {
         });
 
         const result = await response.json();
-
         if (!response.ok || !result.success) {
-          throw new Error(result.message || "Failed to complete sign-in.");
+          throw new Error(
+            result.message || "Failed to complete sign-in on the server.",
+          );
         }
 
         toast.success("Successfully signed in. Redirecting...");
-        router.push("/");
+
+        window.location.href = "/";
       } else {
         throw new Error(finalPayload.details || "Sign-in was cancelled.");
       }
@@ -47,6 +49,8 @@ export default function LoginPage() {
       const message =
         error instanceof Error ? error.message : "An unknown error occurred.";
       toast.error(message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -57,13 +61,14 @@ export default function LoginPage() {
         <p className="text-gray-600 mb-8">
           Sign in with your World App wallet to continue.
         </p>
-        <button
+        <Button
           onClick={signInWithWallet}
           type="button"
+          isLoading={isLoading}
           className="px-6 py-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors"
         >
           Sign In with World App
-        </button>
+        </Button>
       </div>
     </div>
   );

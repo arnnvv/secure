@@ -22,8 +22,7 @@ export default async function GetUsername(): Promise<JSX.Element> {
           <div className="text-center space-y-2 mb-6">
             <h1 className="text-3xl font-bold text-black">Set Your Username</h1>
             <p className="text-sm text-black">
-              Choose a unique username. Shouldn&apos;t start with google- or
-              github-
+              Choose a unique username. github-
             </p>
           </div>
           <div className="space-y-4">
