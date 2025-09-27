@@ -1,21 +1,15 @@
 import Skeleton from "react-loading-skeleton";
 import { getCurrentSession } from "@/actions";
 import { SidebarChatList } from "@/components/SidebarChatList";
-import type { User } from "@/lib/db/schema";
-import { getFriends } from "@/lib/getFriends";
 
 export async function DynamicSidebarChatList() {
   const { user } = await getCurrentSession();
   if (!user) return null;
 
-  const friends: User[] = await getFriends(user.id);
-
-  if (friends.length === 0) return null;
-
   return (
     <>
       <div className="text-xs font-semibold leading-6 text-gray-400">Chats</div>
-      <SidebarChatList sessionId={user.id} friends={friends} />
+      <SidebarChatList sessionId={user.id} />
     </>
   );
 }

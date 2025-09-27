@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { type JSX, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -8,6 +8,7 @@ import type { User } from "@/lib/db/schema";
 import { pusherClient } from "@/lib/pusher-client";
 import { chatHrefConstructor, toPusherKey } from "@/lib/utils";
 import { CustomToast } from "./CustomToast";
+import { useFriends } from "./FriendsProvider";
 
 interface NotificationPayload {
   senderId: number;
@@ -19,15 +20,14 @@ interface NotificationPayload {
 
 export const SidebarChatList = ({
   sessionId,
-  friends,
 }: {
   sessionId: number;
-  friends: User[];
 }): JSX.Element => {
+  const { friends, addFriend } = useFriends();
+  const router = useRouter();
   const [unseenMessagesCount, setUnseenMessagesCount] = useState<
     Record<number, number>
   >({});
-  const [activeChats, setActiveChats] = useState<User[]>(friends);
   const pathname: string | null = usePathname();
 
   useEffect(() => {
@@ -62,8 +62,9 @@ export const SidebarChatList = ({
     };
 
     const newFriendHandler = (newFriend: User) => {
-      setActiveChats((prev) => [...prev, newFriend]);
+      addFriend(newFriend);
       toast.info(`${newFriend.username} has accepted your friend request!`);
+      router.refresh();
     };
 
     pusherClient.bind("new_message_notification", newMessageHandler);
@@ -74,7 +75,7 @@ export const SidebarChatList = ({
       pusherClient.unbind("new_message_notification", newMessageHandler);
       pusherClient.unbind("new_friend", newFriendHandler);
     };
-  }, [sessionId, pathname]);
+  }, [sessionId, pathname, addFriend, router]);
 
   useEffect(() => {
     if (pathname?.includes("chat")) {
@@ -90,6 +91,8 @@ export const SidebarChatList = ({
       }
     }
   }, [pathname, sessionId, unseenMessagesCount]);
+
+  const activeChats = friends;
 
   return (
     <ul className="max-h-[25rem] overflow-y-auto -mx-2 space-y-1">

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { type JSX, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { acceptFriendRequest, rejectFriendRequest } from "@/actions";
+import { useFriends } from "@/components/FriendsProvider";
 import { pusherClient } from "@/lib/pusher-client";
 import { toPusherKey } from "@/lib/utils";
 
@@ -26,6 +27,7 @@ export const FriendRequests = ({
   sessionId: number;
 }): JSX.Element => {
   const router = useRouter();
+  const { addFriend } = useFriends();
   const [friendReqs, setFriendReqs] =
     useState<IncomingFriendRequest[]>(incommingFriendReqs);
 
@@ -64,6 +66,7 @@ export const FriendRequests = ({
       setFriendReqs(previousRequests);
     } else {
       toast.success(res.message);
+      addFriend(res.newFriend);
       router.refresh();
     }
   };

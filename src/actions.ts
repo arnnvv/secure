@@ -280,10 +280,7 @@ export const addFriendAction = async (
 export const acceptFriendRequest = async (
   friendRequestId: number,
   sessionId: number,
-): Promise<
-  | { error: string; message?: undefined }
-  | { message: string; error?: undefined }
-> => {
+): Promise<{ error: string } | { message: string; newFriend: User }> => {
   try {
     const friendRequest: FriendRequest | undefined =
       await db.query.friendRequests.findFirst({
@@ -327,7 +324,7 @@ export const acceptFriendRequest = async (
         ),
     ]);
 
-    return { message: "Friend request accepted" };
+    return { message: "Friend request accepted", newFriend: friendRequester };
   } catch (e) {
     return { error: `Failed to accept friend request: ${e}` };
   }
