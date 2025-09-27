@@ -1,4 +1,5 @@
 import "./globals.css";
+import { MiniKitProvider } from "@worldcoin/minikit-js/minikit-provider";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import type { JSX, ReactNode } from "react";
@@ -23,16 +24,18 @@ export default function RootLayout({
 }>): JSX.Element {
   return (
     <html lang="en">
-      <body
-        className={cn(
-          "min-h-screen bg-background font-sans antialiased",
-          fontSans.variable,
-        )}
-      >
-        <Navbar />
-        {children}
-        <Toaster richColors={true} />
-      </body>
+      <MiniKitProvider>
+        <body
+          className={cn(
+            "min-h-screen bg-background font-sans antialiased",
+            fontSans.variable,
+          )}
+        >
+          <Navbar />
+          {children}
+          <Toaster richColors={true} />
+        </body>
+      </MiniKitProvider>
     </html>
   );
 }
