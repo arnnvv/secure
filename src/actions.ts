@@ -426,11 +426,24 @@ export const sendMessageAction = async ({
     }
   | undefined
 > => {
+  const log = (label: string, data?: unknown, color = "\x1b[36m") => {
+    console.log(`${color}[SEND_MESSAGE_DEBUG] ${label}:\x1b[0m`, data ?? "");
+  };
+
   try {
+    log(
+      "FUNCTION CALLED",
+      { senderDeviceId, senderId: sender.id, receiverId: receiver.id },
+      "\x1b[35m",
+    );
+
+    log("RAW ENCRYPTED CONTENT", encryptedContent, "\x1b[34m");
+
     const contentPayload = JSON.stringify({
       senderDeviceId,
       recipients: encryptedContent,
     });
+    log("CONTENT PAYLOAD (stringified)", contentPayload, "\x1b[33m");
 
     const messageData: NewMessage = {
       senderId: sender.id,
@@ -438,17 +451,20 @@ export const sendMessageAction = async ({
       content: contentPayload,
       createdAt: new Date(),
     };
+    log("MESSAGE DATA (to insert)", messageData, "\x1b[32m");
 
     const [insertedMessage] = await db
       .insert(messages)
       .values(messageData)
       .returning();
+    log("INSERTED MESSAGE (DB returned)", insertedMessage, "\x1b[36m");
 
     const chatPusherPayload = {
       ...insertedMessage,
       senderName: sender.username,
       senderImage: sender.picture,
     };
+    log("CHAT PUSHER PAYLOAD", chatPusherPayload, "\x1b[33m");
 
     const notificationPusherPayload = {
       senderId: sender.id,
@@ -458,7 +474,9 @@ export const sendMessageAction = async ({
       senderDeviceId,
       encryptedPreviews: encryptedContent,
     };
+    log("NOTIFICATION PUSHER PAYLOAD", notificationPusherPayload, "\x1b[35m");
 
+    log("TRIGGERING PUSHER EVENTS START", undefined, "\x1b[31m");
     await Promise.all([
       pusherServer.trigger(
         toPusherKey(
@@ -473,10 +491,12 @@ export const sendMessageAction = async ({
         notificationPusherPayload,
       ),
     ]);
+    log("TRIGGERING PUSHER EVENTS SUCCESS", undefined, "\x1b[32m");
 
+    log("RETURNING SUCCESS RESPONSE", { message: "Message sent" }, "\x1b[36m");
     return { message: "Message sent" };
   } catch (e) {
-    console.error("Error sending message:", e);
+    console.error("\x1b[41m[SEND_MESSAGE_ERROR] CRITICAL FAILURE:\x1b[0m", e);
     return { error: `Failed to send message: ${e}` };
   }
 };
