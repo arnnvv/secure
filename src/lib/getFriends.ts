@@ -77,9 +77,7 @@ export const getFriendsWithLastMessage = async (
       f.friend_id,
       u.username,
       u.picture,
-      -- [FIX] Select the new required field
-      u.world_id_nullifier as "worldIdNullifier",
-      -- [FIX] Removed old, non-existent fields like email, password_hash, etc.
+      u.wallet_address as "walletAddress",
       lm.id as "lastMessageId",
       lm.sender_id as "lastMessageSenderId",
       lm.recipient_id as "lastMessageRecipientId",
