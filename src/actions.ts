@@ -640,6 +640,7 @@ export async function verifyDevicesAction(
 
 export const completeWalletAuthAction = async (
   walletAddress: string,
+  publicKey: string,
 ): Promise<ActionResult> => {
   try {
     let user = await db.query.users.findFirst({
@@ -660,6 +661,26 @@ export const completeWalletAuthAction = async (
       throw new Error("Failed to create or find user in the database.");
     }
 
+    const existingDevice = await db.query.devices.findFirst({
+      where: and(eq(devices.userId, user.id), eq(devices.publicKey, publicKey)),
+    });
+
+    let deviceId;
+
+    if (existingDevice) {
+      deviceId = existingDevice.id;
+    } else {
+      const [newDevice] = await db
+        .insert(devices)
+        .values({
+          userId: user.id,
+          publicKey: publicKey,
+          name: "Primary Device",
+        })
+        .returning({ id: devices.id });
+      deviceId = newDevice.id;
+    }
+
     const sessionToken = generateSessionToken();
     const session = await createSession(sessionToken, user.id);
     await setSessionTokenCookie(sessionToken, session.expiresAt);
@@ -667,6 +688,7 @@ export const completeWalletAuthAction = async (
     return {
       success: true,
       message: "Session created successfully.",
+      data: { deviceId },
     };
   } catch (e) {
     console.error(`Wallet auth completion failed: ${e}`);

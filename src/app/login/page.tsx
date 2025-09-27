@@ -4,6 +4,8 @@ import { MiniKit } from "@worldcoin/minikit-js";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { exportPublicKey, generateX25519KeyPair } from "@/lib/crypto";
+import { cryptoStore } from "@/lib/crypto-store";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -26,21 +28,34 @@ export default function LoginPage() {
       });
 
       if (finalPayload.status === "success") {
+        toast.info("Wallet verified. Securing your device...");
+
+        const keyPair = await generateX25519KeyPair();
+        const publicKeyB64 = await exportPublicKey(keyPair.publicKey);
+
         const response = await fetch("/api/complete-siwe", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ payload: finalPayload }),
+          body: JSON.stringify({
+            payload: finalPayload,
+            publicKey: publicKeyB64,
+          }),
         });
 
         const result = await response.json();
-        if (!response.ok || !result.success) {
+        if (!response.ok || !result.success || !result.data?.deviceId) {
           throw new Error(
-            result.message || "Failed to complete sign-in on the server.",
+            result.message ||
+              "Failed to complete sign-in and device setup on the server.",
           );
         }
 
-        toast.success("Successfully signed in. Redirecting...");
+        await cryptoStore.saveKey("privateKey", keyPair.privateKey);
+        await cryptoStore.saveDeviceId(String(result.data.deviceId));
 
+        toast.success(
+          "Successfully signed in and device secured. Redirecting...",
+        );
         window.location.href = "/";
       } else {
         throw new Error(finalPayload.details || "Sign-in was cancelled.");
