@@ -533,3 +533,52 @@ export const completeWalletAuthAction = async (
     };
   }
 };
+
+export const recordPaymentAction = async ({
+  senderId,
+  recipientId,
+  content,
+}: {
+  senderId: number;
+  recipientId: number;
+  content: string;
+}): Promise<{ message: string } | { error: string }> => {
+  try {
+    const [sender, receiver] = await Promise.all([
+      db.query.users.findFirst({ where: eq(users.id, senderId) }),
+      db.query.users.findFirst({ where: eq(users.id, recipientId) }),
+    ]);
+
+    if (!sender || !receiver) {
+      return { error: "Sender or receiver not found" };
+    }
+
+    const messageData: NewMessage = {
+      senderId,
+      recipientId,
+      content,
+      createdAt: new Date(),
+    };
+
+    const [insertedMessage] = await db
+      .insert(messages)
+      .values(messageData)
+      .returning();
+
+    await pusherServer.trigger(
+      toPusherKey(`private-chat:${chatHrefConstructor(senderId, recipientId)}`),
+      "incoming-message",
+      {
+        ...insertedMessage,
+        senderName: sender.username,
+        senderImage: sender.picture,
+      },
+    );
+
+    return { message: "Payment recorded successfully" };
+  } catch (e) {
+    const errorMessage = e instanceof Error ? e.message : "Unknown error";
+    console.error("Failed to record payment:", errorMessage);
+    return { error: `Failed to record payment: ${errorMessage}` };
+  }
+};
