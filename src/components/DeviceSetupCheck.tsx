@@ -16,12 +16,20 @@ export function DeviceSetupCheck({
   useEffect(() => {
     const checkDeviceSetup = async () => {
       if (typeof window !== "undefined") {
+        console.log("[DeviceCheck] Running device setup check...");
         const privateKey = await cryptoStore.getKey("privateKey");
         const deviceId = await cryptoStore.getDeviceId();
 
+        console.log(
+          `[DeviceCheck] Retrieved privateKey: ${privateKey ? "Exists" : "NULL"}`,
+        );
+        console.log(`[DeviceCheck] Retrieved deviceId: ${deviceId}`);
+
         if (!privateKey || !deviceId) {
+          console.log("[DeviceCheck] FAILED. Redirecting to /setup-device.");
           router.push("/setup-device");
         } else {
+          console.log("[DeviceCheck] PASSED. Rendering children.");
           setIsChecking(false);
         }
       }

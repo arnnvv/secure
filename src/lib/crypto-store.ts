@@ -47,12 +47,24 @@ const performTransaction = async <T>(
     const store = transaction.objectStore(storeName);
     const request = action(store);
 
+    let requestResult: T;
+
     request.onsuccess = () => {
-      resolve(request.result);
+      requestResult = request.result;
     };
 
     request.onerror = () => {
+      console.error("IndexedDB request error:", request.error);
       reject(request.error);
+    };
+
+    transaction.oncomplete = () => {
+      resolve(requestResult);
+    };
+
+    transaction.onerror = () => {
+      console.error("IndexedDB transaction error:", transaction.error);
+      reject(transaction.error);
     };
   });
 };

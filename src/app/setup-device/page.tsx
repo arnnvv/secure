@@ -33,19 +33,32 @@ export default function SetupDevicePage(): JSX.Element {
 
     startTransition(async () => {
       try {
+        console.log("[SetupDevice] Generating key pair...");
         const keyPair = await generateX25519KeyPair();
         const publicKeyB64 = await exportPublicKey(keyPair.publicKey);
 
+        console.log("[SetupDevice] Registering device with server...");
         const result = await registerDeviceAction(publicKeyB64, deviceName);
 
         if (result.success && result.data?.deviceId) {
           const deviceId = result.data.deviceId;
+          console.log(`[SetupDevice] Server returned deviceId: ${deviceId}`);
 
+          console.log("[SetupDevice] Saving private key to IndexedDB...");
           await cryptoStore.saveKey("privateKey", keyPair.privateKey);
+          console.log("[SetupDevice] Private key saved.");
+
+          console.log(
+            `[SetupDevice] Saving deviceId (${deviceId}) to IndexedDB...`,
+          );
           await cryptoStore.saveDeviceId(String(deviceId));
+          console.log(
+            "[SetupDevice] DeviceId saved. Transaction should be complete.",
+          );
 
           toast.success("Device setup complete!");
 
+          console.log("[SetupDevice] Redirecting to /dashboard...");
           router.push("/dashboard");
         } else {
           toast.error(result.message || "Failed to register device.");
