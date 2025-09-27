@@ -1,15 +1,11 @@
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, or, sql } from "drizzle-orm";
 import { db } from "./db";
-import type { Device, FriendRequest, Message, User } from "./db/schema";
+import type { FriendRequest, Message, User } from "./db/schema";
 import { users } from "./db/schema";
 
-export type UserWithDevices = User & {
-  devices: Pick<Device, "id" | "publicKey">[];
-};
-
-export const getFriends = async (id: number): Promise<UserWithDevices[]> => {
+export const getFriends = async (id: number): Promise<User[]> => {
   const friendships: FriendRequest[] = await db.query.friendRequests.findMany({
-    where: (requests, { and, or }) =>
+    where: (requests) =>
       and(
         or(eq(requests.requesterId, id), eq(requests.recipientId, id)),
         eq(requests.status, "accepted"),
@@ -26,22 +22,14 @@ export const getFriends = async (id: number): Promise<UserWithDevices[]> => {
     return [];
   }
 
-  const friends: UserWithDevices[] = await db.query.users.findMany({
+  const friends: User[] = await db.query.users.findMany({
     where: inArray(users.id, friendIds),
-    with: {
-      devices: {
-        columns: {
-          id: true,
-          publicKey: true,
-        },
-      },
-    },
   });
 
   return friends;
 };
 
-export interface FriendWithLastMsg extends UserWithDevices {
+export interface FriendWithLastMsg extends User {
   lastMessage: Message;
 }
 
@@ -49,53 +37,34 @@ export const getFriendsWithLastMessage = async (
   userId: number,
 ): Promise<FriendWithLastMsg[]> => {
   const friendsWithMessages = await db.execute(sql`
-    WITH user_friends AS (
+    SELECT
+      f.friend_id,
+      u.username,
+      u.picture,
+      u.wallet_address AS "walletAddress",
+      last_msg.id AS "lastMessageId",
+      last_msg.sender_id AS "lastMessageSenderId",
+      last_msg.recipient_id AS "lastMessageRecipientId",
+      last_msg.content AS "lastMessageContent",
+      last_msg.created_at AS "lastMessageCreatedAt"
+    FROM (
       SELECT
         CASE
           WHEN requester_id = ${userId} THEN recipient_id
           ELSE requester_id
         END AS friend_id
       FROM chat_friend_requests
-      WHERE (requester_id = ${userId} OR recipient_id = ${userId})
-        AND status = 'accepted'
-    ),
-    ranked_messages AS (
-      SELECT
-        m.*,
-        ROW_NUMBER() OVER (
-          PARTITION BY
-            CASE
-              WHEN m.sender_id = ${userId} THEN m.recipient_id
-              ELSE m.sender_id
-            END
-          ORDER BY m.created_at DESC
-        ) as rn
-      FROM chat_messages m
-      WHERE m.sender_id = ${userId} OR m.recipient_id = ${userId}
-    )
-    SELECT
-      f.friend_id,
-      u.username,
-      u.picture,
-      u.wallet_address as "walletAddress",
-      lm.id as "lastMessageId",
-      lm.sender_id as "lastMessageSenderId",
-      lm.recipient_id as "lastMessageRecipientId",
-      lm.content as "lastMessageContent",
-      lm.created_at as "lastMessageCreatedAt",
-      (
-        SELECT JSON_AGG(
-          JSON_BUILD_OBJECT('id', d.id, 'publicKey', d.public_key)
-        )
-        FROM chat_devices d
-        WHERE d.user_id = f.friend_id
-      ) as devices
-    FROM user_friends f
+      WHERE (${userId} IN (requester_id, recipient_id)) AND status = 'accepted'
+    ) AS f
     JOIN chat_users u ON f.friend_id = u.id
-    LEFT JOIN ranked_messages lm ON (
-      (lm.sender_id = ${userId} AND lm.recipient_id = f.friend_id) OR
-      (lm.sender_id = f.friend_id AND lm.recipient_id = ${userId})
-    ) AND lm.rn = 1
+    LEFT JOIN LATERAL (
+      SELECT *
+      FROM chat_messages m
+      WHERE (m.sender_id = ${userId} AND m.recipient_id = f.friend_id)
+        OR (m.sender_id = f.friend_id AND m.recipient_id = ${userId})
+      ORDER BY m.created_at DESC
+      LIMIT 1
+    ) AS last_msg ON true
   `);
 
   if (!friendsWithMessages.rows.length) return [];
@@ -106,7 +75,6 @@ export const getFriendsWithLastMessage = async (
       username: row.username,
       picture: row.picture,
       walletAddress: row.walletAddress,
-      devices: row.devices || [],
       lastMessage: row.lastMessageId
         ? {
             id: row.lastMessageId,

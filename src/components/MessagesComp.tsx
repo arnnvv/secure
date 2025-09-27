@@ -7,14 +7,7 @@ import { type JSX, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { getPaginatedMessages } from "@/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  decryptMessage,
-  deriveSharedSecret,
-  importPublicKey,
-} from "@/lib/crypto";
-import { cryptoStore } from "@/lib/crypto-store";
-import type { Message } from "@/lib/db/schema";
-import type { UserWithDevices } from "@/lib/getFriends";
+import type { Message, User } from "@/lib/db/schema";
 import { pusherClient } from "@/lib/pusher-client";
 import { cn, toPusherKey } from "@/lib/utils";
 
@@ -26,10 +19,10 @@ function ChatMessage({
   sessionImg,
   measureElement,
 }: {
-  message: DecryptedMessage;
+  message: Message;
   isCurrentUser: boolean;
   hasNxtMessage: boolean;
-  chatPartner: UserWithDevices;
+  chatPartner: User;
   sessionImg: string | null | undefined;
   measureElement: (element: HTMLElement | null) => void;
 }) {
@@ -75,7 +68,7 @@ function ChatMessage({
               !isCurrentUser && !hasNxtMessage && "rounded-bl-none",
             )}
           >
-            {message.decryptedContent ?? "..."}{" "}
+            {message.content}{" "}
             <span className="ml-2 text-xs text-gray-400">
               {format(new Date(message.createdAt), "HH:mm")}
             </span>
@@ -86,10 +79,6 @@ function ChatMessage({
   );
 }
 
-interface DecryptedMessage extends Message {
-  decryptedContent: string | null;
-}
-
 export const MessagesComp = ({
   chatId,
   chatPartner,
@@ -98,76 +87,19 @@ export const MessagesComp = ({
   initialMessages,
 }: {
   chatId: string;
-  chatPartner: UserWithDevices;
+  chatPartner: User;
   sessionId: number;
   sessionImg: string | null | undefined;
   initialMessages: Message[];
 }): JSX.Element => {
   const parentRef = useRef<HTMLDivElement>(null);
-
-  const [decryptedMessages, setDecryptedMessages] = useState<
-    DecryptedMessage[]
-  >(() => initialMessages.map((msg) => ({ ...msg, decryptedContent: null })));
-
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(initialMessages.length >= 50);
   const cursorRef = useRef<string | null>(
     initialMessages.length > 0
       ? initialMessages[0].createdAt.toISOString()
       : null,
-  );
-
-  const cryptoKeysRef = useRef<{
-    ownPrivateKey: CryptoKey | null;
-    ownDeviceId: string | null;
-    partnerPublicKeys: Map<number, CryptoKey>;
-    isSetup: boolean;
-  }>({
-    ownPrivateKey: null,
-    ownDeviceId: null,
-    partnerPublicKeys: new Map(),
-    isSetup: false,
-  });
-
-  const decryptMessageContent = useCallback(
-    async (message: Message): Promise<string> => {
-      const { ownPrivateKey, ownDeviceId, partnerPublicKeys } =
-        cryptoKeysRef.current;
-      if (!ownPrivateKey || !ownDeviceId) return "[Key Error]";
-      try {
-        const payload = JSON.parse(message.content);
-        const { senderDeviceId, recipients } = payload;
-        const ownDeviceIdNum = parseInt(ownDeviceId, 10);
-        const senderIsSelf = message.senderId === sessionId;
-
-        if (senderIsSelf) {
-          const anyRecipientIdStr = Object.keys(recipients)[0];
-          if (!anyRecipientIdStr) return "[No Recipients]";
-          const partnerPublicKey = partnerPublicKeys.get(
-            parseInt(anyRecipientIdStr, 10),
-          );
-          if (!partnerPublicKey) return "[Partner Key Error]";
-          const sharedKey = await deriveSharedSecret(
-            ownPrivateKey,
-            partnerPublicKey,
-          );
-          return await decryptMessage(sharedKey, recipients[anyRecipientIdStr]);
-        } else {
-          const encryptedForMe = recipients[ownDeviceIdNum];
-          if (!encryptedForMe) return "[Not for this device]";
-          const senderPublicKey = partnerPublicKeys.get(senderDeviceId);
-          if (!senderPublicKey) return "[Sender Key Error]";
-          const sharedKey = await deriveSharedSecret(
-            ownPrivateKey,
-            senderPublicKey,
-          );
-          return await decryptMessage(sharedKey, encryptedForMe);
-        }
-      } catch (_e) {
-        return message.content;
-      }
-    },
-    [sessionId],
   );
 
   const fetchPrevious = useCallback(async () => {
@@ -180,67 +112,20 @@ export const MessagesComp = ({
       );
       cursorRef.current = nextCursor;
       setHasMore(nextCursor !== null);
-
-      const decryptedNewMessages = await Promise.all(
-        newMessages.map(async (msg) => ({
-          ...msg,
-          decryptedContent: await decryptMessageContent(msg),
-        })),
-      );
-
-      setDecryptedMessages((prev) => [
-        ...decryptedNewMessages.reverse(),
-        ...prev,
-      ]);
+      setMessages((prev) => [...newMessages.reverse(), ...prev]);
     } catch (_error) {
       toast.error("Failed to load older messages.");
     } finally {
       setIsLoadingMore(false);
     }
-  }, [chatId, hasMore, isLoadingMore, decryptMessageContent]);
-
-  useEffect(() => {
-    const setupAndDecrypt = async () => {
-      try {
-        if (cryptoKeysRef.current.isSetup) return;
-        const privateKey = await cryptoStore.getKey("privateKey");
-        const deviceId = await cryptoStore.getDeviceId();
-        if (!privateKey || !deviceId)
-          throw new Error("Local device keys not found.");
-        cryptoKeysRef.current.ownPrivateKey = privateKey;
-        cryptoKeysRef.current.ownDeviceId = deviceId;
-        const partnerDeviceList = chatPartner.devices;
-        await Promise.all(
-          partnerDeviceList.map(async (device) => {
-            const importedKey = await importPublicKey(device.publicKey);
-            cryptoKeysRef.current.partnerPublicKeys.set(device.id, importedKey);
-          }),
-        );
-        cryptoKeysRef.current.isSetup = true;
-        const newlyDecrypted = await Promise.all(
-          initialMessages.map(async (msg) => ({
-            ...msg,
-            decryptedContent: await decryptMessageContent(msg),
-          })),
-        );
-        setDecryptedMessages(newlyDecrypted);
-      } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Failed to set up secure session.",
-        );
-      }
-    };
-    setupAndDecrypt();
-  }, [chatPartner.devices, initialMessages, decryptMessageContent]);
+  }, [chatId, hasMore, isLoadingMore]);
 
   const virtualizer = useVirtualizer({
-    count: decryptedMessages.length,
+    count: messages.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => 75,
     overscan: 10,
-    getItemKey: (index) => decryptedMessages[index]?.id,
+    getItemKey: (index) => messages[index]?.id,
     onChange: (instance) => {
       if (
         instance.getVirtualItems().length > 0 &&
@@ -255,28 +140,23 @@ export const MessagesComp = ({
 
   useEffect(() => {
     if (virtualizer.getVirtualItems().length > 0) {
-      virtualizer.scrollToIndex(decryptedMessages.length - 1, {
+      virtualizer.scrollToIndex(messages.length - 1, {
         align: "end",
       });
     }
-  }, [virtualizer, decryptedMessages.length]);
+  }, [virtualizer, messages.length]);
 
   useEffect(() => {
-    const pusherMessageHandler = async (message: Message) => {
-      if (!cryptoKeysRef.current.isSetup) return;
-      const decryptedContent = await decryptMessageContent(message);
+    const pusherMessageHandler = (message: Message) => {
       const parentEl = parentRef.current;
       const isAtBottom =
         parentEl &&
         parentEl.scrollHeight - parentEl.scrollTop - parentEl.clientHeight < 1;
 
-      setDecryptedMessages((prev) => [
-        ...prev,
-        { ...message, decryptedContent },
-      ]);
+      setMessages((prev) => [...prev, message]);
 
       if (isAtBottom) {
-        virtualizer.scrollToIndex(decryptedMessages.length, { align: "end" });
+        virtualizer.scrollToIndex(messages.length, { align: "end" });
       }
     };
 
@@ -286,7 +166,7 @@ export const MessagesComp = ({
       pusherClient.unsubscribe(toPusherKey(`private-chat:${chatId}`));
       pusherClient.unbind("incoming-message", pusherMessageHandler);
     };
-  }, [chatId, decryptMessageContent, decryptedMessages.length, virtualizer]);
+  }, [chatId, messages.length, virtualizer]);
 
   return (
     <div
@@ -307,11 +187,10 @@ export const MessagesComp = ({
           </div>
         )}
         {virtualizer.getVirtualItems().map((virtualRow) => {
-          const message = decryptedMessages[virtualRow.index];
+          const message = messages[virtualRow.index];
           const isCurrentUser = message.senderId === sessionId;
           const hasNxtMessage =
-            decryptedMessages[virtualRow.index - 1]?.senderId ===
-            message.senderId;
+            messages[virtualRow.index - 1]?.senderId === message.senderId;
 
           return (
             <div

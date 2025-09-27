@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "d": "next dev --turbopack",
-    "b": "next build",
-    "p": "next start",
+    "b": "NODE_OPTIONS='--no-deprecation' next build",
+    "p": "NODE_OPTIONS='--no-deprecation' next start",
     "l": "biome check --write",
     "f": "biome format --write",
     "cl": "rm -rf .next",

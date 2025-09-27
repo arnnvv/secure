@@ -11,23 +11,16 @@ import {
 } from "react";
 import ReactTextareaAutosize from "react-textarea-autosize";
 import { toast } from "sonner";
-import { getVerifiedDeviceIdsForContact, sendMessageAction } from "@/actions";
+import { sendMessageAction } from "@/actions";
 import { Button } from "@/components/ui/button";
-import {
-  deriveSharedSecret,
-  encryptMessage,
-  importPublicKey,
-} from "@/lib/crypto";
-import { cryptoStore } from "@/lib/crypto-store";
 import type { User } from "@/lib/db/schema";
-import type { UserWithDevices } from "@/lib/getFriends";
 
 export const ChatInput = ({
   sender,
   receiver,
 }: {
   sender: Omit<User, "password">;
-  receiver: UserWithDevices;
+  receiver: User;
 }): JSX.Element => {
   const textareaRef: RefObject<HTMLTextAreaElement | null> =
     useRef<HTMLTextAreaElement | null>(null);
@@ -43,42 +36,8 @@ export const ChatInput = ({
     setIsLoading(true);
 
     try {
-      const ownPrivateKey = await cryptoStore.getKey("privateKey");
-      const senderDeviceId = await cryptoStore.getDeviceId();
-
-      if (!ownPrivateKey || !senderDeviceId) {
-        throw new Error(
-          "Your encryption keys are not available on this device. Please log in again to set them up.",
-        );
-      }
-
-      const verifiedDeviceIds = await getVerifiedDeviceIdsForContact(
-        receiver.id,
-      );
-      const recipientDevicesToEncryptFor = receiver.devices.filter((device) =>
-        verifiedDeviceIds.includes(device.id),
-      );
-
-      if (recipientDevicesToEncryptFor.length === 0) {
-        throw new Error(
-          `You haven't verified any of ${receiver.username}'s devices. Please verify their identity to send messages.`,
-        );
-      }
-
-      const encryptedContent: Record<number, string> = {};
-
-      for (const device of recipientDevicesToEncryptFor) {
-        const recipientPublicKey = await importPublicKey(device.publicKey);
-        const sharedKey = await deriveSharedSecret(
-          ownPrivateKey,
-          recipientPublicKey,
-        );
-        encryptedContent[device.id] = await encryptMessage(sharedKey, input);
-      }
-
       const res = await sendMessageAction({
-        senderDeviceId: parseInt(senderDeviceId, 10),
-        encryptedContent,
+        content: input,
         sender,
         receiver,
       });

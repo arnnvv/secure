@@ -8,23 +8,15 @@ import { completeWalletAuthAction } from "@/actions";
 
 interface IRequestPayload {
   payload: MiniAppWalletAuthSuccessPayload;
-  publicKey: string;
 }
 
 export const POST = async (req: NextRequest) => {
-  const { payload, publicKey } = (await req.json()) as IRequestPayload;
+  const { payload } = (await req.json()) as IRequestPayload;
   const nonce = (await cookies()).get("siwe-nonce")?.value;
 
   if (!nonce) {
     return NextResponse.json(
       { success: false, message: "Nonce not found." },
-      { status: 422 },
-    );
-  }
-
-  if (!publicKey) {
-    return NextResponse.json(
-      { success: false, message: "Public key is required." },
       { status: 422 },
     );
   }
@@ -35,10 +27,7 @@ export const POST = async (req: NextRequest) => {
       throw new Error("SIWE message verification failed.");
     }
 
-    const actionResult = await completeWalletAuthAction(
-      payload.address,
-      publicKey,
-    );
+    const actionResult = await completeWalletAuthAction(payload.address);
 
     if (!actionResult.success) {
       throw new Error(actionResult.message);
