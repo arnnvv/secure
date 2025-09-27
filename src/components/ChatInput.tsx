@@ -91,7 +91,13 @@ export const ChatInput = ({
 
         <div className="absolute right-0 bottom-0 flex justify-between py-2 pl-3 pr-2">
           <div className="flex-shrin-0">
-            <Button isLoading={isLoading} onClick={sendMessage} type="submit" size="sm" className="text-xs sm:text-sm">
+            <Button
+              isLoading={isLoading}
+              onClick={sendMessage}
+              type="submit"
+              size="sm"
+              className="text-xs sm:text-sm"
+            >
               Send
             </Button>
           </div>

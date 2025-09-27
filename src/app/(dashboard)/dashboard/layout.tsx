@@ -17,7 +17,7 @@ import { FriendsProvider } from "@/components/FriendsProvider";
 import { type Icon, Icons } from "@/components/Icons";
 import type { User } from "@/lib/db/schema";
 import { getFriends } from "@/lib/getFriends";
- export const metadata: Metadata = {
+export const metadata: Metadata = {
   title: "Dashboard",
   description: "Your dashboard",
 };
