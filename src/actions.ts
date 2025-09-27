@@ -250,31 +250,85 @@ export const changeUsernameAction = async (
 };
 
 export async function uploadFile(fd: FormData): Promise<ActionResult> {
+  console.log(
+    "SERVER CHECK - Secret Key Loaded:",
+    !!process.env.UPLOADTHING_SECRET,
+  );
+  console.log(
+    "SERVER CHECK - App ID Loaded:",
+    !!process.env.UPLOADTHING_APP_ID,
+  );
+
+  console.log("\x1b[36m[START] uploadFile called\x1b[0m");
+
+  console.log("\x1b[36m[START] uploadFile called\x1b[0m");
+  console.log("\x1b[34m[INPUT] FormData keys:\x1b[0m", Array.from(fd.keys()));
+
+  console.log("\x1b[36m[SESSION] Fetching current session...\x1b[0m");
   const { session, user } = await getCurrentSession();
-  if (session === null || !user)
+  console.log("\x1b[34m[SESSION RESULT]\x1b[0m", { session, user });
+
+  if (session === null || !user) {
+    console.log("\x1b[31m[AUTH FAILED] No valid session or user\x1b[0m");
     return {
       success: false,
       message: "Not Logged in",
     };
-  const file = fd.get("file") as File;
+  }
+  console.log("\x1b[32m[AUTH PASSED] Valid session and user detected\x1b[0m");
 
+  console.log("\x1b[36m[FILE] Extracting file from FormData...\x1b[0m");
+  const file = fd.get("file") as File;
+  if (!file) {
+    console.log("\x1b[31m[FILE ERROR] No file field in FormData\x1b[0m");
+    return {
+      success: false,
+      message: "No file provided",
+    };
+  }
+  console.log("\x1b[34m[FILE RECEIVED]\x1b[0m", {
+    name: file.name,
+    size: file.size,
+    type: file.type,
+  });
+
+  console.log("\x1b[36m[UPLOAD] Sending file to utapi.uploadFiles...\x1b[0m");
   const uploadedFile: UploadFileResult = await utapi.uploadFiles(file);
-  if (uploadedFile.error)
+  console.log("\x1b[34m[UPLOAD RESULT]\x1b[0m", uploadedFile);
+
+  if (uploadedFile.error) {
+    console.log(
+      "\x1b[31m[UPLOAD FAILED] Error from utapi:\x1b[0m",
+      uploadedFile.error,
+    );
     return {
       success: false,
       message: uploadedFile.error.message,
     };
+  }
+  console.log("\x1b[32m[UPLOAD SUCCESS] File uploaded to UFS\x1b[0m");
+  console.log("\x1b[34m[UFS URL]\x1b[0m", uploadedFile.data.ufsUrl);
+
   try {
+    console.log("\x1b[36m[DB UPDATE] Updating user picture in DB...\x1b[0m");
     await db
       .update(users)
       .set({ picture: uploadedFile.data.ufsUrl })
       .where(eq(users.id, user.id));
+    console.log(
+      "\x1b[32m[DB SUCCESS] Picture updated for user:\x1b[0m",
+      user.id,
+    );
   } catch (e) {
+    console.log("\x1b[31m[DB ERROR] Failed to update user picture\x1b[0m", e);
     return {
       success: false,
       message: `Error updating image ${e}`,
     };
   }
+
+  console.log("\x1b[32m[SUCCESS] File uploaded and DB updated\x1b[0m");
+  console.log("\x1b[36m[END] uploadFile finished\x1b[0m");
   return {
     success: true,
     message: uploadedFile.data.ufsUrl,

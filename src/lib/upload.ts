@@ -5,7 +5,7 @@ class UTApiInstance {
   private utapi: UTApi;
 
   private constructor() {
-    this.utapi = new UTApi();
+    this.utapi = new UTApi({ logLevel: "All" });
   }
 
   public static getInstance(): UTApiInstance {
