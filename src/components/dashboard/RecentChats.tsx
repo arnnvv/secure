@@ -21,11 +21,12 @@ export async function RecentChats() {
   const friendsWithLastMsg: FriendWithLastMsg[] =
     await getFriendsWithLastMessage(user.id);
 
-  const sessionUser = await db.query.users.findFirst({
+  const sessionUserWithDevices = await db.query.users.findFirst({
     where: eq(users.id, user.id),
+    with: { devices: { columns: { id: true, publicKey: true } } },
   });
 
-  if (!sessionUser) return redirect("/login");
+  if (!sessionUserWithDevices) return redirect("/login");
 
   if (friendsWithLastMsg.length === 0) {
     return <p className="text-sm text-zinc-500">Nothing to show here...</p>;
@@ -55,7 +56,7 @@ export async function RecentChats() {
         </div>
         <RecentChatPreview
           lastMessage={friend.lastMessage}
-          sessionUser={sessionUser}
+          sessionUser={sessionUserWithDevices}
           friend={friend}
         />
       </Link>

@@ -1,20 +1,20 @@
 "use server";
 
-import { and, desc, eq, lt, or } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { cache } from "react";
 import type { UploadFileResult } from "uploadthing/types";
 import {
-  createSession,
-  generateSessionToken,
   invalidateSession,
   type SessionValidationResult,
   validateSessionToken,
 } from "./lib/auth";
 import { db } from "./lib/db";
 import {
+  type Device,
   devices,
+  deviceVerifications,
   type FriendRequest,
   friendReqStatusEnum,
   friendRequests,
@@ -27,7 +27,7 @@ import {
 import type { ActionResult } from "./lib/formComtrol";
 import { pusherServer } from "./lib/pusher-server";
 import { globalGETRateLimit, globalPOSTRateLimit } from "./lib/request";
-import { deleteSessionTokenCookie, setSessionTokenCookie } from "./lib/session";
+import { deleteSessionTokenCookie } from "./lib/session";
 import { utapi } from "./lib/upload";
 import { chatHrefConstructor, toPusherKey } from "./lib/utils";
 
@@ -59,7 +59,6 @@ export const signOutAction = async (): Promise<ActionResult> => {
       success: false,
       message: "Not authenticated",
     };
-
   try {
     await invalidateSession(session.id);
     await deleteSessionTokenCookie();
@@ -92,7 +91,6 @@ export const changeUsernameAction = async (
       success: false,
       message: "Username is required",
     };
-
   const username = usernameRaw.trim().toLowerCase();
 
   if (username.length < 3) {
@@ -116,12 +114,10 @@ export const changeUsernameAction = async (
         success: false,
         message: "Not Logged in",
       };
-
     await db
       .update(users)
       .set({ username: username })
       .where(eq(users.id, user.id));
-
     revalidatePath("/");
     revalidatePath("/dashboard");
 
@@ -145,7 +141,6 @@ export const changeUsernameAction = async (
 
 export async function uploadFile(fd: FormData): Promise<ActionResult> {
   const { session, user } = await getCurrentSession();
-
   if (session === null || !user) {
     return {
       success: false,
@@ -212,7 +207,6 @@ export const addFriendAction = async (
     const friend: User | undefined = await db.query.users.findFirst({
       where: (users, { eq }) => eq(users.username, receiverUsername),
     });
-
     if (!friend) {
       return {
         success: false,
@@ -244,7 +238,6 @@ export const addFriendAction = async (
             or(eq(requests.status, "pending"), eq(requests.status, "accepted")),
           ),
       });
-
     if (existingRequest) {
       return {
         success: false,
@@ -264,13 +257,11 @@ export const addFriendAction = async (
         senderImage: user.picture,
       },
     );
-
     await db.insert(friendRequests).values({
       requesterId: user.id,
       recipientId: friend.id,
       status: friendReqStatusEnum.enumValues[0],
     });
-
     return { success: true, message: "Friend request sent" };
   } catch (_e) {
     return { success: false, message: "Unexpected error. Check server logs." };
@@ -280,7 +271,10 @@ export const addFriendAction = async (
 export const acceptFriendRequest = async (
   friendRequestId: number,
   sessionId: number,
-): Promise<{ error: string } | { message: string; newFriend: User }> => {
+): Promise<
+  | { error: string }
+  | { message: string; newFriend: User & { devices: Device[] } }
+> => {
   try {
     const friendRequest: FriendRequest | undefined =
       await db.query.friendRequests.findFirst({
@@ -296,9 +290,11 @@ export const acceptFriendRequest = async (
     const [friendRequester, user] = await Promise.all([
       db.query.users.findFirst({
         where: eq(users.id, friendRequestId),
+        with: { devices: true },
       }),
       db.query.users.findFirst({
         where: eq(users.id, sessionId),
+        with: { devices: true },
       }),
     ]);
 
@@ -357,7 +353,6 @@ export const rejectFriendRequest = async (
           eq(friendRequests.recipientId, sessionId),
         ),
       );
-
     return { message: "Friend request rejected" };
   } catch (e) {
     return { error: `failed to reject friend request: ${e}` };
@@ -365,51 +360,48 @@ export const rejectFriendRequest = async (
 };
 
 export const sendMessageAction = async ({
-  content,
+  senderDeviceId,
+  encryptedContent,
   sender,
   receiver,
 }: {
-  content: string;
+  senderDeviceId: number;
+  encryptedContent: Record<number, string>;
   sender: Omit<User, "password_hash">;
   receiver: User;
 }): Promise<
-  | {
-      message: string;
-      error?: undefined;
-    }
-  | {
-      error: string;
-      message?: undefined;
-    }
+  | { message: string; error?: undefined }
+  | { error: string; message?: undefined }
   | undefined
 > => {
   try {
+    const contentPayload = JSON.stringify({
+      senderDeviceId,
+      recipients: encryptedContent,
+    });
     const messageData: NewMessage = {
       senderId: sender.id,
       recipientId: receiver.id,
-      content: content,
+      content: contentPayload,
       createdAt: new Date(),
     };
-
     const [insertedMessage] = await db
       .insert(messages)
       .values(messageData)
       .returning();
-
     const chatPusherPayload = {
       ...insertedMessage,
       senderName: sender.username,
       senderImage: sender.picture,
     };
-
     const notificationPusherPayload = {
       senderId: sender.id,
       senderName: sender.username,
       senderImage: sender.picture,
       chatId: chatHrefConstructor(sender.id, receiver.id),
-      message: content,
+      senderDeviceId,
+      encryptedPreviews: encryptedContent,
     };
-
     await Promise.all([
       pusherServer.trigger(
         toPusherKey(
@@ -424,7 +416,6 @@ export const sendMessageAction = async ({
         notificationPusherPayload,
       ),
     ]);
-
     return { message: "Message sent" };
   } catch (e) {
     return { error: `Failed to send message: ${e}` };
@@ -444,7 +435,6 @@ export async function getPaginatedMessages(
 
   const [userId1, userId2] = chatId.split("--").map(Number);
   const chatPartnerId = user.id === userId1 ? userId2 : userId1;
-
   const query = db
     .select()
     .from(messages)
@@ -465,7 +455,6 @@ export async function getPaginatedMessages(
     )
     .orderBy(desc(messages.createdAt))
     .limit(MESSAGES_PER_PAGE);
-
   const fetchedMessages = await query;
 
   let nextCursor: string | null = null;
@@ -476,63 +465,62 @@ export async function getPaginatedMessages(
   return { messages: fetchedMessages, nextCursor };
 }
 
-export const completeWalletAuthAction = async (
-  walletAddress: string,
-): Promise<ActionResult> => {
-  try {
-    let user = await db.query.users.findFirst({
-      where: eq(users.walletAddress, walletAddress),
-    });
-
-    if (!user) {
-      const [newUser] = await db
-        .insert(users)
-        .values({
-          walletAddress: walletAddress.toLowerCase(),
-        })
-        .returning();
-      user = newUser;
-    }
-
-    if (!user) {
-      throw new Error("Failed to create or find user in the database.");
-    }
-
-    let device = await db.query.devices.findFirst({
-      where: and(
-        eq(devices.userId, user.id),
-        eq(devices.name, "Primary Device"),
-      ),
-    });
-
-    if (!device) {
-      [device] = await db
-        .insert(devices)
-        .values({
-          userId: user.id,
-          publicKey: "unused",
-          name: "Primary Device",
-        })
-        .returning();
-    }
-
-    const sessionToken = generateSessionToken();
-    const session = await createSession(sessionToken, user.id);
-    await setSessionTokenCookie(sessionToken, session.expiresAt);
-
-    return {
-      success: true,
-      message: "Session created successfully.",
-      data: { deviceId: device.id },
-    };
-  } catch (e) {
-    console.error(`Wallet auth completion failed: ${e}`);
-    return {
-      success: false,
-      message: "An unexpected error occurred while creating your user session.",
-    };
+export async function getVerifiedDeviceIdsForContact(
+  contactUserId: number,
+): Promise<number[]> {
+  const { user } = await getCurrentSession();
+  if (!user) {
+    throw new Error("Not authenticated");
   }
-};
+
+  const contactDevices = await db.query.devices.findMany({
+    where: eq(devices.userId, contactUserId),
+    columns: { id: true },
+  });
+  if (contactDevices.length === 0) {
+    return [];
+  }
+
+  const contactDeviceIds = contactDevices.map((d) => d.id);
+  const verifications = await db
+    .select({ verifiedDeviceId: deviceVerifications.verifiedDeviceId })
+    .from(deviceVerifications)
+    .where(
+      and(
+        eq(deviceVerifications.verifierUserId, user.id),
+        inArray(deviceVerifications.verifiedDeviceId, contactDeviceIds),
+      ),
+    );
+  return verifications.map((v) => v.verifiedDeviceId);
+}
+
+export async function verifyDevicesAction(
+  deviceIdsToVerify: number[],
+): Promise<ActionResult> {
+  const { user } = await getCurrentSession();
+  if (!user) {
+    return { success: false, message: "Not authenticated" };
+  }
+
+  if (!Array.isArray(deviceIdsToVerify) || deviceIdsToVerify.length === 0) {
+    return { success: false, message: "No device IDs provided" };
+  }
+
+  try {
+    const valuesToInsert = deviceIdsToVerify.map((deviceId) => ({
+      verifierUserId: user.id,
+      verifiedDeviceId: deviceId,
+    }));
+    await db
+      .insert(deviceVerifications)
+      .values(valuesToInsert)
+      .onConflictDoNothing();
+    return { success: true, message: "Devices verified successfully." };
+  } catch (error) {
+    console.error("Failed to verify devices:", error);
+    return { success: false, message: "An unexpected error occurred." };
+  }
+}
 
 export const recordPaymentAction = async ({
   senderId,

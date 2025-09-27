@@ -13,14 +13,21 @@ import ReactTextareaAutosize from "react-textarea-autosize";
 import { toast } from "sonner";
 import { sendMessageAction } from "@/actions";
 import { Button } from "@/components/ui/button";
+import {
+  deriveSharedSecret,
+  encryptMessage,
+  importPublicKey,
+} from "@/lib/crypto";
+import { cryptoStore } from "@/lib/crypto-store";
 import type { User } from "@/lib/db/schema";
+import type { UserWithDevices } from "@/lib/getFriends";
 
 export const ChatInput = ({
   sender,
   receiver,
 }: {
-  sender: Omit<User, "password">;
-  receiver: User;
+  sender: Omit<User, "password_hash">;
+  receiver: UserWithDevices;
 }): JSX.Element => {
   const textareaRef: RefObject<HTMLTextAreaElement | null> =
     useRef<HTMLTextAreaElement | null>(null);
@@ -36,8 +43,37 @@ export const ChatInput = ({
     setIsLoading(true);
 
     try {
+      const ownPrivateKey = await cryptoStore.getKey("privateKey");
+      const senderDeviceId = await cryptoStore.getDeviceId();
+
+      if (!ownPrivateKey || !senderDeviceId) {
+        throw new Error(
+          "Your encryption keys are not available on this device. Please log in again to set them up.",
+        );
+      }
+
+      const recipientDevicesToEncryptFor = receiver.devices;
+
+      if (recipientDevicesToEncryptFor.length === 0) {
+        throw new Error(
+          `${receiver.username} has no devices set up to receive messages.`,
+        );
+      }
+
+      const encryptedContent: Record<number, string> = {};
+
+      for (const device of recipientDevicesToEncryptFor) {
+        const recipientPublicKey = await importPublicKey(device.publicKey);
+        const sharedKey = await deriveSharedSecret(
+          ownPrivateKey,
+          recipientPublicKey,
+        );
+        encryptedContent[device.id] = await encryptMessage(sharedKey, input);
+      }
+
       const res = await sendMessageAction({
-        content: input,
+        senderDeviceId: parseInt(senderDeviceId, 10),
+        encryptedContent,
         sender,
         receiver,
       });

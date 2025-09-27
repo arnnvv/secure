@@ -4,6 +4,7 @@ import Link from "next/link";
 import { type JSX, type ReactNode, Suspense } from "react";
 import Skeleton from "react-loading-skeleton";
 import { getCurrentSession } from "@/actions";
+import { DeviceSetupCheck } from "@/components/DeviceSetupCheck";
 import { DynamicFriendRequestOption } from "@/components/dashboard/DynamicFriendRequestOption";
 import {
   ChatListSkeleton,
@@ -15,8 +16,8 @@ import {
 } from "@/components/dashboard/UserProfileSection";
 import { FriendsProvider } from "@/components/FriendsProvider";
 import { type Icon, Icons } from "@/components/Icons";
-import type { User } from "@/lib/db/schema";
-import { getFriends } from "@/lib/getFriends";
+import { getFriends, type UserWithDevices } from "@/lib/getFriends";
+
 export const metadata: Metadata = {
   title: "Dashboard",
   description: "Your dashboard",
@@ -32,7 +33,7 @@ export default async function DashboardLayout({
   children: ReactNode;
 }): Promise<JSX.Element> {
   const { user } = await getCurrentSession();
-  const friends: User[] = user ? await getFriends(user.id) : [];
+  const friends: UserWithDevices[] = user ? await getFriends(user.id) : [];
 
   return (
     <FriendsProvider initialFriends={friends}>
@@ -41,7 +42,6 @@ export default async function DashboardLayout({
           <Link href="/dashboard" className="flex h-16 shrink-10 items-center">
             <Icons.Logo className="h-8 w-auto text-cyan-400" />
           </Link>
-
           <nav className="flex flex-1 flex-col">
             <ul className="flex flex-1 flex-col gap-y-7">
               <li>
@@ -93,9 +93,11 @@ export default async function DashboardLayout({
             </ul>
           </nav>
         </div>
-        <aside className="max-h-screen container py-16 md:py-12 w-full">
-          {children}
-        </aside>
+        <DeviceSetupCheck>
+          <aside className="max-h-screen container py-16 md:py-12 w-full">
+            {children}
+          </aside>
+        </DeviceSetupCheck>
       </div>
     </FriendsProvider>
   );

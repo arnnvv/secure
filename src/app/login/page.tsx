@@ -4,6 +4,8 @@ import { MiniKit } from "@worldcoin/minikit-js";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { exportPublicKey, generateX25519KeyPair } from "@/lib/crypto";
+import { cryptoStore } from "@/lib/crypto-store";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -15,7 +17,12 @@ export default function LoginPage() {
     }
 
     setIsLoading(true);
+    let keyPair: CryptoKeyPair | null = null;
+
     try {
+      keyPair = await generateX25519KeyPair();
+      const publicKeyB64 = await exportPublicKey(keyPair.publicKey);
+
       const res = await fetch(`/api/nonce`);
       if (!res.ok) throw new Error("Failed to fetch nonce from server.");
       const { nonce } = await res.json();
@@ -26,21 +33,29 @@ export default function LoginPage() {
       });
 
       if (finalPayload.status === "success") {
-        toast.info("Wallet verified. Setting up your session...");
+        toast.info("Wallet verified. Setting up your secure session...");
 
         const response = await fetch("/api/complete-siwe", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             payload: finalPayload,
+            publicKey: publicKeyB64,
           }),
         });
-
         const result = await response.json();
+
         if (!response.ok || !result.success) {
           throw new Error(
             result.message || "Failed to complete sign-in on the server.",
           );
+        }
+
+        if (keyPair && result.data?.deviceId) {
+          await cryptoStore.saveKey("privateKey", keyPair.privateKey);
+          await cryptoStore.saveDeviceId(result.data.deviceId.toString());
+        } else {
+          throw new Error("Could not retrieve device ID from server.");
         }
 
         toast.success("Successfully signed in. Redirecting...");

@@ -1,11 +1,11 @@
 "use client";
 
 import { createContext, type ReactNode, useContext, useState } from "react";
-import type { User } from "@/lib/db/schema";
+import type { UserWithDevices } from "@/lib/getFriends";
 
 type FriendsContextType = {
-  friends: User[];
-  addFriend: (newFriend: User) => void;
+  friends: UserWithDevices[];
+  addFriend: (newFriend: UserWithDevices) => void;
 };
 
 const FriendsContext = createContext<FriendsContextType | undefined>(undefined);
@@ -15,11 +15,11 @@ export function FriendsProvider({
   initialFriends,
 }: {
   children: ReactNode;
-  initialFriends: User[];
+  initialFriends: UserWithDevices[];
 }) {
-  const [friends, setFriends] = useState<User[]>(initialFriends);
+  const [friends, setFriends] = useState<UserWithDevices[]>(initialFriends);
 
-  const addFriend = (newFriend: User) => {
+  const addFriend = (newFriend: UserWithDevices) => {
     setFriends((prev) => {
       if (prev.some((f) => f.id === newFriend.id)) {
         return prev;

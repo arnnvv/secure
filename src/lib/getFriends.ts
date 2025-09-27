@@ -1,9 +1,13 @@
 import { and, eq, inArray, or, sql } from "drizzle-orm";
 import { db } from "./db";
-import type { FriendRequest, Message, User } from "./db/schema";
+import type { Device, FriendRequest, Message, User } from "./db/schema";
 import { users } from "./db/schema";
 
-export const getFriends = async (id: number): Promise<User[]> => {
+export type UserWithDevices = User & {
+  devices: Pick<Device, "id" | "publicKey">[];
+};
+
+export const getFriends = async (id: number): Promise<UserWithDevices[]> => {
   const friendships: FriendRequest[] = await db.query.friendRequests.findMany({
     where: (requests) =>
       and(
@@ -22,14 +26,22 @@ export const getFriends = async (id: number): Promise<User[]> => {
     return [];
   }
 
-  const friends: User[] = await db.query.users.findMany({
+  const friends: UserWithDevices[] = await db.query.users.findMany({
     where: inArray(users.id, friendIds),
+    with: {
+      devices: {
+        columns: {
+          id: true,
+          publicKey: true,
+        },
+      },
+    },
   });
 
   return friends;
 };
 
-export interface FriendWithLastMsg extends User {
+export interface FriendWithLastMsg extends UserWithDevices {
   lastMessage: Message;
 }
 
@@ -46,7 +58,14 @@ export const getFriendsWithLastMessage = async (
       last_msg.sender_id AS "lastMessageSenderId",
       last_msg.recipient_id AS "lastMessageRecipientId",
       last_msg.content AS "lastMessageContent",
-      last_msg.created_at AS "lastMessageCreatedAt"
+      last_msg.created_at AS "lastMessageCreatedAt",
+      (
+        SELECT JSON_AGG(
+          JSON_BUILD_OBJECT('id', d.id, 'publicKey', d.public_key)
+        )
+        FROM chat_devices d
+        WHERE d.user_id = f.friend_id
+      ) as devices
     FROM (
       SELECT
         CASE
@@ -75,6 +94,7 @@ export const getFriendsWithLastMessage = async (
       username: row.username,
       picture: row.picture,
       walletAddress: row.walletAddress,
+      devices: row.devices || [],
       lastMessage: row.lastMessageId
         ? {
             id: row.lastMessageId,
