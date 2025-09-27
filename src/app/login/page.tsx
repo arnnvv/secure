@@ -37,8 +37,9 @@ export default function LoginPage() {
         </p>
         <IDKitWidget
           app_id={process.env.NEXT_PUBLIC_WLD_APP_ID as `app_${string}`}
-          action={process.env.NEXT_PUBLIC_WLD_ACTION!}
+          action={process.env.NEXT_PUBLIC_WLD_ACTION_NAME!}
           onSuccess={onSuccess}
+          signal="login"
           handleVerify={handleVerify}
           verification_level={VerificationLevel.Orb}
         >
