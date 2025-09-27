@@ -27,8 +27,8 @@ export const PaymentModal = ({
   sender: User;
 }): JSX.Element | null => {
   const [amount, setAmount] = useState("");
-  const [token, setToken] = useState<Tokens>(Tokens.WLD);
   const [isLoading, setIsLoading] = useState(false);
+  const token = Tokens.WLD;
 
   if (!isOpen) return null;
 
@@ -99,7 +99,7 @@ export const PaymentModal = ({
         <h2 className="text-2xl font-bold mb-4">Pay {recipient.username}</h2>
         <div className="space-y-4">
           <div>
-            <Label htmlFor="amount">Amount</Label>
+            <Label htmlFor="amount">Amount in WLD</Label>
             <Input
               id="amount"
               type="number"
@@ -109,25 +109,7 @@ export const PaymentModal = ({
               step="0.01"
             />
           </div>
-          <div>
-            <Label>Token</Label>
-            <div className="flex gap-2 mt-2">
-              {/* 3. Compare and set state using enum members */}
-              <Button
-                variant={token === Tokens.WLD ? "default" : "outline"}
-                onClick={() => setToken(Tokens.WLD)}
-              >
-                WLD
-              </Button>
-              <Button
-                variant={token === Tokens.USDC ? "default" : "outline"}
-                onClick={() => setToken(Tokens.USDC)}
-                disabled
-              >
-                USDC
-              </Button>
-            </div>
-          </div>
+
           <div className="flex justify-end gap-2 pt-4">
             <Button
               variant="ghost"
@@ -145,3 +127,4 @@ export const PaymentModal = ({
     </div>
   );
 };
+
