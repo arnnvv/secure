@@ -38,14 +38,11 @@ export default function SetupDevicePage(): JSX.Element {
 
         const result = await registerDeviceAction(publicKeyB64, deviceName);
 
-        if (result.success) {
-          const deviceId = result.message.split(": ")[1];
-          if (!deviceId) {
-            throw new Error("Could not retrieve device ID from server.");
-          }
+        if (result.success && result.data?.deviceId) {
+          const deviceId = result.data.deviceId;
 
           await cryptoStore.saveKey("privateKey", keyPair.privateKey);
-          await cryptoStore.saveDeviceId(deviceId);
+          await cryptoStore.saveDeviceId(String(deviceId));
 
           toast.success("Device setup complete!");
 

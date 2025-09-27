@@ -513,7 +513,8 @@ export async function registerDeviceAction(
 
     return {
       success: true,
-      message: `Device registered successfully with ID: ${newDevice.id}`,
+      message: "Device registered successfully!",
+      data: { deviceId: newDevice.id },
     };
   } catch (error) {
     console.error("Failed to register device:", error);

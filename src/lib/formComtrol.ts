@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 export interface ActionResult {
   success: boolean;
   message: string;
+  data?: any;
 }
 
 export const formControlTypes = [
