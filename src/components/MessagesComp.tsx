@@ -54,13 +54,13 @@ function ChatMessage({
         </div>
         <div
           className={cn(
-            "flex flex-col space-y-2 text-base max-w-md",
+            "flex flex-col space-y-2 text-sm sm:text-base max-w-xs sm:max-w-md",
             isCurrentUser ? "order-1" : "order-2",
           )}
         >
           <span
             className={cn(
-              "px-4 py-2 rounded-lg inline-block break-words",
+              "px-3 py-2 sm:px-4 sm:py-2 rounded-lg inline-block break-words",
               isCurrentUser
                 ? "bg-cyan-500 text-white"
                 : "bg-gray-200 text-gray-900",
@@ -172,7 +172,7 @@ export const MessagesComp = ({
     <div
       ref={parentRef}
       id="messages"
-      className="flex h-full flex-1 flex-col gap-4 p-3 overflow-y-auto scrollbar-thumb-blue scrollbar-thumb-rounded scrollbar-track-blue-lighter scrollbar-w-2 scrolling-touch"
+      className="flex h-full flex-1 flex-col gap-2 sm:gap-4 p-2 sm:p-3 overflow-y-auto scrollbar-thumb-blue scrollbar-thumb-rounded scrollbar-track-blue-lighter scrollbar-w-2 scrolling-touch"
     >
       <div
         style={{

@@ -38,7 +38,7 @@ export const CustomToast = ({
   senderMessage: string;
   image: string | null;
 }): JSX.Element => (
-  <div className="max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex items-center ring-1 ring-black ring-opacity-5 z-50">
+  <div className="max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex items-center ring-1 ring-black/5 z-50">
     <a
       onClick={(): string | number => toast.dismiss(toastId)}
       href={href}

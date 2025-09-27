@@ -34,18 +34,18 @@ export async function RecentChats() {
   return friendsWithLastMsg.map((friend) => (
     <div
       key={friend.id}
-      className="relative bg-zinc-50 border border-zinc-200 p-3 rounded-md mb-2"
+      className="relative bg-zinc-50 border border-zinc-200 p-2 sm:p-3 rounded-md mb-2"
     >
-      <div className="absolute right-4 inset-y-0 flex items-center">
-        <ChevronRight className="h-7 w-7 text-zinc-400" />
+      <div className="absolute right-2 sm:right-4 inset-y-0 flex items-center">
+        <ChevronRight className="h-5 w-5 sm:h-7 sm:w-7 text-zinc-400" />
       </div>
       <Link
         href={`/dashboard/chat/${chatHrefConstructor(user.id, friend.id)}`}
-        className="relative sm:flex"
+        className="relative flex"
       >
-        <div className="mb-4 flex-shrink-0 sm:mb-0 sm:mr-4">
+        <div className="mb-2 sm:mb-4 flex-shrink-0 sm:mr-4">
           <div className="relative h-6 w-6">
-            <Avatar className="w-8 h-8">
+            <Avatar className="w-6 h-6 sm:w-8 sm:h-8">
               <AvatarImage src={friend?.picture || "/default-avatar.png"} />
               <AvatarFallback>
                 {friend.username ? friend.username[0].toUpperCase() : "?"}

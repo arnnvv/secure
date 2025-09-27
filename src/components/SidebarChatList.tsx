@@ -107,17 +107,17 @@ export const SidebarChatList = ({
                   sessionId,
                   friend.id,
                 )}`}
-                className="text-gray-700 hover:text-cyan-400 hover:bg-gray-50 group flex items-center gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold"
+                className="text-gray-700 hover:text-cyan-400 hover:bg-gray-50 group flex items-center gap-x-2 sm:gap-x-3 rounded-md p-2 text-xs sm:text-sm leading-6 font-semibold"
               >
-                <Avatar>
+                <Avatar className="w-6 h-6 sm:w-8 sm:h-8">
                   <AvatarImage src={friend.picture || ""} />
                   <AvatarFallback>
                     {friend.username ? friend.username[0].toUpperCase() : "?"}
                   </AvatarFallback>
                 </Avatar>
-                {friend.username}
+                <span className="truncate">{friend.username}</span>
                 {unseenMsgCount > 0 && (
-                  <div className="border-r-cyan-400 font-medium text-xs w-5 h-5 rounded-full flex justify-center items-center bg-cyan-400 text-white">
+                  <div className="border-r-cyan-400 font-medium text-xs w-4 h-4 sm:w-5 sm:h-5 rounded-full flex justify-center items-center bg-cyan-400 text-white">
                     {unseenMsgCount}
                   </div>
                 )}
