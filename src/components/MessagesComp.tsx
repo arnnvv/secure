@@ -2,7 +2,7 @@
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { format } from "date-fns";
-import { Loader2 } from "lucide-react";
+import { DollarSign, Loader2 } from "lucide-react";
 import { type JSX, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { getPaginatedMessages } from "@/actions";
@@ -106,6 +106,29 @@ function DecryptedChatMessage({
   };
 
   return <ChatMessage message={displayMessage} {...rest} />;
+}
+
+function PaymentMessage({
+  message,
+  measureElement,
+}: {
+  message: Message;
+  measureElement: (element: HTMLElement | null) => void;
+}) {
+  return (
+    <div ref={measureElement} className="flex justify-center items-center my-2">
+      <div
+        className={cn(
+          "flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200",
+        )}
+      >
+        <DollarSign className="h-4 w-4 flex-shrink-0" />
+        <span className="text-xs sm:text-sm font-medium">
+          {message.content}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 export const MessagesComp = ({
@@ -219,6 +242,7 @@ export const MessagesComp = ({
         )}
         {virtualizer.getVirtualItems().map((virtualRow) => {
           const message = messages[virtualRow.index];
+          const isPayment = message.content.startsWith("PAYMENT::");
           const isCurrentUser = message.senderId === sessionId;
           const hasNxtMessage =
             messages[virtualRow.index - 1]?.senderId === message.senderId;
@@ -235,15 +259,25 @@ export const MessagesComp = ({
                 transform: `translateY(${virtualRow.start}px)`,
               }}
             >
-              <DecryptedChatMessage
-                measureElement={virtualizer.measureElement}
-                message={message}
-                isCurrentUser={isCurrentUser}
-                hasNxtMessage={hasNxtMessage}
-                chatPartner={chatPartner}
-                sessionImg={sessionImg}
-                sharedKey={sharedKey}
-              />
+              {isPayment ? (
+                <PaymentMessage
+                  measureElement={virtualizer.measureElement}
+                  message={{
+                    ...message,
+                    content: message.content.substring("PAYMENT::".length),
+                  }}
+                />
+              ) : (
+                <DecryptedChatMessage
+                  measureElement={virtualizer.measureElement}
+                  message={message}
+                  isCurrentUser={isCurrentUser}
+                  hasNxtMessage={hasNxtMessage}
+                  chatPartner={chatPartner}
+                  sessionImg={sessionImg}
+                  sharedKey={sharedKey}
+                />
+              )}
             </div>
           );
         })}

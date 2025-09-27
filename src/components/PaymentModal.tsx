@@ -68,7 +68,7 @@ export const PaymentModal = ({
         await recordPaymentAction({
           senderId: sender.id,
           recipientId: recipient.id,
-          content: `Sent ${amount} ${token}`,
+          content: `PAYMENT::Sent ${amount} ${token}`,
         });
 
         onCloseAction();
