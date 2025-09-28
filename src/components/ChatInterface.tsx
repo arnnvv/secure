@@ -1,6 +1,6 @@
 "use client";
 
-import { DollarSign } from "lucide-react";
+import { Coins } from "lucide-react";
 import { type JSX, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { getPublicKeyAction } from "@/actions";
@@ -46,6 +46,10 @@ export default function ChatInterface({
 
         const derived = await deriveSharedSecret(keyPair.privateKey, publicKey);
         setSharedKey(derived);
+        console.log(
+          "Shared key derived successfully for",
+          chatPartner.username,
+        );
       } catch (err) {
         console.error("Failed to derive shared key:", err);
         toast.error("Failed to establish secure connection.");
@@ -72,36 +76,31 @@ export default function ChatInterface({
         sender={sessionUser}
       />
 
-      <div className="flex-1 justify-between flex flex-col h-full max-h-[calc(100vh-6rem)]">
-        <div className="flex sm:items-center justify-between py-3 border-b-2 border-gray-200 px-2 sm:px-4">
-          <div className="relative flex items-center space-x-2 sm:space-x-4">
-            <div className="relative">
-              <div className="relative w-8 sm:w-12 h-8 sm:h-12">
-                <Avatar>
-                  <AvatarImage src={chatPartner.picture || ""} />
-                  <AvatarFallback>
-                    {chatPartner.username
-                      ? chatPartner.username[0].toUpperCase()
-                      : "?"}
-                  </AvatarFallback>
-                </Avatar>
-              </div>
-            </div>
-            <div className="flex flex-col leading-tight">
-              <div className="text-lg sm:text-xl flex items-center">
-                <span className="text-gray-700 mr-2 sm:mr-3 font-semibold truncate">
-                  {chatPartner.username}
-                </span>
-              </div>
+      <div className="flex-1 justify-between flex flex-col h-full lg:max-h-[calc(100vh-6rem)] pb-16 lg:pb-0">
+        <div className="flex items-center justify-between py-3 border-b-2 border-gray-200 px-2 sm:px-4">
+          <div className="flex items-center space-x-3">
+            <Avatar className="w-10 h-10">
+              <AvatarImage src={chatPartner.picture || ""} />
+              <AvatarFallback>
+                {chatPartner.username
+                  ? chatPartner.username[0].toUpperCase()
+                  : "?"}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col">
+              <span className="text-gray-600 font-medium text-sm">
+                {chatPartner.username}
+              </span>
             </div>
           </div>
           <Button
             variant="outline"
             onClick={() => setPaymentModalOpen(true)}
             aria-label={`Pay ${chatPartner.username}`}
+            className="flex items-center space-x-2"
           >
-            <DollarSign className="h-4 w-4 mr-0 sm:mr-2" />
-            <span className="hidden sm:inline">Pay</span>
+            <Coins className="h-4 w-4" />
+            <span className="text-sm">Pay</span>
           </Button>
         </div>
 

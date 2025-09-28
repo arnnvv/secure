@@ -1,6 +1,7 @@
 import "react-loading-skeleton/dist/skeleton.css";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { type JSX, type ReactNode, Suspense } from "react";
 import Skeleton from "react-loading-skeleton";
 import { getCurrentSession } from "@/actions";
@@ -16,11 +17,11 @@ import {
 import { E2EEProvider } from "@/components/E2EEProvider";
 import { FriendsProvider } from "@/components/FriendsProvider";
 import { type Icon, Icons } from "@/components/Icons";
-import { MobileHeader } from "@/components/MobileHeader";
 import { MobileBottomNavigation } from "@/components/MobileBottomNavigation";
+import { MobileHeader } from "@/components/MobileHeader";
 import type { User } from "@/lib/db/schema";
-import { getFriends } from "@/lib/getFriends";
 import { getFriendRequests } from "@/lib/getFriendRequests";
+import { getFriends } from "@/lib/getFriends";
 import { resolveIdstoUsers } from "@/lib/resolveIdsToUsers";
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -28,7 +29,7 @@ export const metadata: Metadata = {
 };
 
 const sidebarNav: { id: number; name: string; href: string; Icon: Icon }[] = [
-  { id: 1, name: "Add friend", href: "/dashboard/add", Icon: "UserPlus" },
+  { id: 1, name: "Add friend", href: "/dashboard/add", Icon: "Users" },
 ];
 
 export default async function DashboardLayout({
@@ -37,9 +38,17 @@ export default async function DashboardLayout({
   children: ReactNode;
 }): Promise<JSX.Element> {
   const { user } = await getCurrentSession();
-  const friends: User[] = user ? await getFriends(user.id) : [];
-  const friendRequests = user ? await getFriendRequests(user.id) : [];
-  const incommingFriendReqUsers: User[] = user ? await resolveIdstoUsers(friendRequests.map(req => req.requesterId)) : [];
+
+  // If no user, redirect to login
+  if (!user) {
+    redirect("/login");
+  }
+
+  const friends: User[] = await getFriends(user.id);
+  const friendRequests = await getFriendRequests(user.id);
+  const incommingFriendReqUsers: User[] = await resolveIdstoUsers(
+    friendRequests.map((req) => req.requesterId),
+  );
 
   return (
     <E2EEProvider>
@@ -117,14 +126,12 @@ export default async function DashboardLayout({
           </div>
 
           {/* Mobile Content */}
-          <div className="lg:hidden flex-1 overflow-hidden">
-            {children}
-          </div>
+          <div className="lg:hidden flex-1 overflow-hidden">{children}</div>
 
           {/* Mobile Bottom Navigation */}
           <div className="lg:hidden">
-            <MobileBottomNavigation 
-              unreadChats={0} // TODO: Calculate real unread chat count
+            <MobileBottomNavigation
+              unreadChats={0} // This will be calculated client-side
               pendingRequests={incommingFriendReqUsers.length}
             />
           </div>

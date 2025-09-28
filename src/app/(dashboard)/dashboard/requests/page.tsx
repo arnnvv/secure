@@ -34,14 +34,16 @@ export default async function page(): Promise<JSX.Element> {
       {/* Mobile Header */}
       <div className="lg:hidden bg-[#20203A] px-4 py-4 border-b border-[#2A2A3E]">
         <h1 className="text-white font-bold text-xl">Friend Requests</h1>
-        <p className="text-gray-300 text-sm mt-1">{incommingFriendReqUsers.length} pending requests</p>
+        <p className="text-gray-300 text-sm mt-1">
+          {incommingFriendReqUsers.length} pending requests
+        </p>
       </div>
-      
+
       {/* Desktop Header */}
       <div className="hidden lg:block pt-8">
         <h1 className="font-bold text-5xl mb-8 text-white">Friend requests</h1>
       </div>
-      
+
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <div className="lg:flex lg:flex-col lg:gap-4">

@@ -1,10 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { JSX } from "react";
+import { useEffect, useRef, useState } from "react";
+import {
+  MobileUserProfileDropdown,
+  MobileUserProfileDropdownSkeleton,
+} from "@/components/UserProfileDropdown";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MobileUserProfileDropdown, MobileUserProfileDropdownSkeleton } from "@/components/UserProfileDropdown";
 
 interface MobileHeaderProps {
   user?: {
@@ -16,10 +21,14 @@ interface MobileHeaderProps {
 export function MobileHeader({ user }: MobileHeaderProps): JSX.Element {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsDropdownOpen(false);
       }
     }
@@ -33,9 +42,23 @@ export function MobileHeader({ user }: MobileHeaderProps): JSX.Element {
     };
   }, [isDropdownOpen]);
 
+  const handleBackClick = () => {
+    router.back();
+  };
+
   return (
     <header className="mobile-header">
-      <div className="flex items-center space-x-3">
+      <div className="flex items-center justify-between w-full">
+        {/* Back Button */}
+        <button
+          onClick={handleBackClick}
+          className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-[#2A2A3E] transition-colors"
+          aria-label="Go back"
+        >
+          <ArrowLeft className="w-6 h-6 text-white" />
+        </button>
+
+        {/* Avatar and Username */}
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -53,11 +76,14 @@ export function MobileHeader({ user }: MobileHeaderProps): JSX.Element {
               </span>
             </div>
           </button>
-          
+
           {isDropdownOpen && (
-            <div className="absolute top-full left-0 mt-2 w-48 bg-[#20203A] border border-[#2A2A3E] rounded-lg shadow-lg z-50">
+            <div className="absolute top-full right-0 mt-2 w-48 bg-[#20203A] border border-[#2A2A3E] rounded-lg shadow-lg z-50">
               {user ? (
-                <MobileUserProfileDropdown user={user} onClose={() => setIsDropdownOpen(false)} />
+                <MobileUserProfileDropdown
+                  user={user}
+                  onClose={() => setIsDropdownOpen(false)}
+                />
               ) : (
                 <MobileUserProfileDropdownSkeleton />
               )}

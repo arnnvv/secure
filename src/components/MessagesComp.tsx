@@ -89,20 +89,43 @@ function DecryptedChatMessage({
   sharedKey: CryptoKey;
 } & Omit<Parameters<typeof ChatMessage>[0], "message">) {
   const [decryptedContent, setDecryptedContent] = useState<string | null>(null);
+  const [isDecrypting, setIsDecrypting] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
-    decryptMessage(sharedKey, message.content).then((content) => {
-      if (isMounted) setDecryptedContent(content);
-    });
+    setIsDecrypting(true);
+
+    console.log(
+      "Attempting to decrypt message:",
+      message.content.substring(0, 50) + "...",
+    );
+
+    decryptMessage(sharedKey, message.content)
+      .then((content) => {
+        console.log("Decryption successful:", content);
+        if (isMounted) {
+          setDecryptedContent(content);
+          setIsDecrypting(false);
+        }
+      })
+      .catch((error) => {
+        console.error("Decryption failed:", error);
+        if (isMounted) {
+          setDecryptedContent("Failed to decrypt message");
+          setIsDecrypting(false);
+        }
+      });
+
     return () => {
       isMounted = false;
     };
-  }, [message, sharedKey]);
+  }, [message.content, sharedKey]);
 
   const displayMessage = {
     ...message,
-    content: decryptedContent ?? "Decrypting...",
+    content:
+      decryptedContent ??
+      (isDecrypting ? "Decrypting..." : "Failed to decrypt"),
   };
 
   return <ChatMessage message={displayMessage} {...rest} />;

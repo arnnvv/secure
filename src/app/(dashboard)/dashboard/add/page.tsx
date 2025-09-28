@@ -23,25 +23,37 @@ export default async function Page(): Promise<JSX.Element> {
         <div className="lg:hidden bg-[#20203A] px-4 py-4 border-b border-[#2A2A3E]">
           <h1 className="text-white font-bold text-xl">Add Friend</h1>
         </div>
-        
+
         {/* Desktop Header */}
         <div className="hidden lg:block pt-8">
           <h1 className="text-5xl font-bold mb-8 text-white">Add a friend</h1>
         </div>
-        
+
         {/* Content */}
         <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 lg:py-0">
           <div className="w-full max-w-md">
             <div className="text-center mb-8">
               <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                <svg
+                  className="w-8 h-8 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
                 </svg>
               </div>
               <h2 className="text-2xl font-bold text-white mb-2">Add Friend</h2>
-              <p className="text-gray-300">Enter a username to send a friend request</p>
+              <p className="text-gray-300">
+                Enter a username to send a friend request
+              </p>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <Label
@@ -59,13 +71,23 @@ export default async function Page(): Promise<JSX.Element> {
                   required
                 />
               </div>
-              
-              <Button 
-                type="submit" 
+
+              <Button
+                type="submit"
                 className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold py-3 rounded-lg flex items-center justify-center space-x-2 transition-colors"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                  />
                 </svg>
                 <span>Send Request</span>
               </Button>

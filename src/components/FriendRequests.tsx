@@ -97,21 +97,22 @@ export const FriendRequests = ({
       ) : (
         <div className="space-y-0">
           {friendReqs.map((friendReq) => (
-            <div 
-              key={friendReq.id} 
-              className="mobile-friend-request-card"
-            >
+            <div key={friendReq.id} className="mobile-friend-request-card">
               <div className="flex items-center space-x-3 mb-3">
                 <div className="mobile-friend-request-avatar">
                   {friendReq.username[0].toUpperCase()}
                 </div>
                 <div className="flex-1">
-                  <h3 className="mobile-friend-request-name">{friendReq.username}</h3>
-                  <p className="mobile-friend-request-username">@{friendReq.username.toLowerCase()}</p>
-                  <p className="mobile-friend-request-mutual">3 mutual friends</p>
+                  <h3 className="mobile-friend-request-name">
+                    {friendReq.username}
+                  </h3>
+                  <p className="mobile-friend-request-username">
+                    @{friendReq.username.toLowerCase()}
+                  </p>
+                  <p className="mobile-friend-request-mutual">Friend request</p>
                 </div>
               </div>
-              
+
               <div className="mobile-friend-request-actions">
                 <button
                   type="button"

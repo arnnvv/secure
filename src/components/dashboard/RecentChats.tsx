@@ -34,10 +34,7 @@ export async function RecentChats() {
   return (
     <div className="h-full overflow-y-auto">
       {friendsWithLastMsg.map((friend) => (
-        <div
-          key={friend.id}
-          className="mobile-chat-item"
-        >
+        <div key={friend.id} className="mobile-chat-item">
           <Link
             href={`/dashboard/chat/${chatHrefConstructor(user.id, friend.id)}`}
             className="relative flex items-center space-x-3 w-full"
@@ -49,27 +46,28 @@ export async function RecentChats() {
             </div>
             <div className="mobile-chat-content">
               <div className="flex items-center justify-between">
-                <h3 className="mobile-chat-name">
-                  {friend.username}
-                </h3>
+                <h3 className="mobile-chat-name">{friend.username}</h3>
                 <span className="mobile-chat-time">
-                  {friend.lastMessage?.createdAt ? 
-                    new Date(friend.lastMessage.createdAt).toLocaleTimeString([], { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    }) : ''}
+                  {friend.lastMessage?.createdAt
+                    ? new Date(friend.lastMessage.createdAt).toLocaleTimeString(
+                        [],
+                        {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        },
+                      )
+                    : ""}
                 </span>
               </div>
               <p className="mobile-chat-preview">
-                {friend.lastMessage ? (
-                  friend.lastMessage.senderId === user.id ? (
-                    `You: ${friend.lastMessage.content}`
-                  ) : (
-                    friend.lastMessage.content
-                  )
-                ) : (
-                  "No messages yet"
-                )}
+                {friend.lastMessage
+                  ? friend.lastMessage.senderId === user.id
+                    ? `You: ${friend.lastMessage.content.includes(".") && friend.lastMessage.content.length > 20 ? "sent a message" : friend.lastMessage.content}`
+                    : friend.lastMessage.content.includes(".") &&
+                        friend.lastMessage.content.length > 20
+                      ? `${friend.username} sent a message`
+                      : friend.lastMessage.content
+                  : "No messages yet"}
               </p>
             </div>
             {/* Unread message badge - you can add logic to show this based on unread count */}

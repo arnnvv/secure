@@ -4,7 +4,7 @@ import "react-loading-skeleton/dist/skeleton.css";
 
 export default function loading(): JSX.Element {
   return (
-    <div className="w-full flex flex-col gap-3">
+    <div className="w-full flex flex-col gap-3 bg-[#1A1A2E] p-4">
       <Skeleton className="mb-4" height={60} width={500} />
       <Skeleton height={20} width={150} />
       <Skeleton height={50} width={400} />

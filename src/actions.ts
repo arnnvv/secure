@@ -40,8 +40,16 @@ export const getCurrentSession = cache(
         user: null,
       };
     }
-    const result = await validateSessionToken(token);
-    return result;
+    try {
+      const result = await validateSessionToken(token);
+      return result;
+    } catch (error) {
+      console.error("Session validation failed:", error);
+      return {
+        session: null,
+        user: null,
+      };
+    }
   },
 );
 

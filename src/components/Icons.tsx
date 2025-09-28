@@ -1,4 +1,10 @@
-import { KeyRound, type LucideProps, UserPlus } from "lucide-react";
+import {
+  Coins,
+  KeyRound,
+  type LucideProps,
+  UserPlus,
+  Users,
+} from "lucide-react";
 import type { JSX } from "react";
 
 export const Icons = {
@@ -29,6 +35,8 @@ export const Icons = {
     </svg>
   ),
   UserPlus,
+  Users,
+  Coins,
   KeyRound,
 };
 

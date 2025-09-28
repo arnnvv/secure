@@ -1,5 +1,4 @@
 "use client";
-
 import {
   type ChangeEvent,
   type JSX,
@@ -27,7 +26,6 @@ export const ChatInput = ({
 }): JSX.Element => {
   const textareaRef: RefObject<HTMLTextAreaElement | null> =
     useRef<HTMLTextAreaElement | null>(null);
-
   const [input, setInput] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -37,20 +35,21 @@ export const ChatInput = ({
       return;
     }
     setIsLoading(true);
-
     try {
+      console.log("Encrypting message:", input);
       const encryptedContent = await encryptMessage(sharedKey, input);
-
+      console.log(
+        "Encrypted content:",
+        encryptedContent.substring(0, 50) + "...",
+      );
       const res = await sendMessageAction({
         content: encryptedContent,
         sender,
         receiver,
       });
-
       if (res?.error) {
         throw new Error(res.error);
       }
-
       setInput("");
       textareaRef.current?.focus();
     } catch (e) {
@@ -65,48 +64,41 @@ export const ChatInput = ({
   };
 
   return (
-    <div className="border-t border-gray-200 px-2 sm:px-4 pt-3 sm:pt-4 mb-2 sm:mb-0">
-      <div className="relative flex-1 overflow-hidden rounded-lg shadow-sm ring-1 ring-inset ring-gray-300 focus-within:ring-2 focus-within:ring-cyan-400">
-        <ReactTextareaAutosize
-          ref={textareaRef as Ref<HTMLTextAreaElement>}
-          onKeyDown={(e: KeyboardEvent<HTMLTextAreaElement>) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              sendMessage();
+    <div className="border-t border-gray-200 px-2 sm:px-4 pt-3 sm:pt-4 pb-3 sm:pb-4">
+      <div className="flex items-end gap-2">
+        <div className="flex-1 overflow-hidden rounded-lg shadow-sm ring-1 ring-inset ring-gray-300 focus-within:ring-2 focus-within:ring-cyan-400 bg-white">
+          <ReactTextareaAutosize
+            ref={textareaRef as Ref<HTMLTextAreaElement>}
+            onKeyDown={(e: KeyboardEvent<HTMLTextAreaElement>) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+            rows={1}
+            maxRows={4}
+            value={input}
+            onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+              setInput(e.target.value)
             }
-          }}
-          rows={1}
-          value={input}
-          onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
-            setInput(e.target.value)
-          }
-          placeholder={`Message ${receiver.username}`}
-          className="block w-full resize-none border-0 bg-transparent text-gray-900 placeholder:text-gray-400 focus:ring-0 py-1.5 sm:py-1.5 text-sm sm:text-sm leading-6"
-        />
-
-        <div
-          onClick={(): void => textareaRef.current?.focus()}
-          className="py-2"
-          aria-hidden="true"
+            placeholder={`Message ${receiver.username}`}
+            className="block w-full resize-none border-0 bg-white text-gray-900 placeholder:text-gray-500 focus:ring-0 py-3 px-3 text-sm leading-6 min-h-[42px]"
+            style={{
+              color: "#ffffff",
+              backgroundColor: "#111827",
+            }}
+          />
+        </div>
+        <Button
+          isLoading={isLoading}
+          onClick={sendMessage}
+          type="submit"
+          size="sm"
+          className="text-xs sm:text-sm shrink-0 h-[42px] px-4"
+          disabled={!input.trim() || isLoading}
         >
-          <div className="py-px">
-            <div className="h-9" />
-          </div>
-        </div>
-
-        <div className="absolute right-0 bottom-0 flex justify-between py-2 pl-3 pr-2">
-          <div className="flex-shrin-0">
-            <Button
-              isLoading={isLoading}
-              onClick={sendMessage}
-              type="submit"
-              size="sm"
-              className="text-xs sm:text-sm"
-            >
-              Send
-            </Button>
-          </div>
-        </div>
+          Send
+        </Button>
       </div>
     </div>
   );

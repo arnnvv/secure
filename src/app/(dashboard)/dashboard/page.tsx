@@ -14,14 +14,14 @@ export default function Page(): JSX.Element {
           <p className="text-gray-300 text-sm mt-1">Recent conversations</p>
         </div>
       </div>
-      
+
       {/* Desktop Header */}
       <div className="hidden lg:block pt-8">
         <h1 className="font-bold text-3xl sm:text-4xl lg:text-5xl mb-6 sm:mb-8 text-white">
           Recent chats
         </h1>
       </div>
-      
+
       {/* Content */}
       <div className="flex-1 overflow-hidden">
         <Suspense fallback={<RecentChatsSkeleton />}>

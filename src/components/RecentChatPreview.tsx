@@ -12,11 +12,25 @@ export const RecentChatPreview = ({
   sessionUser: User;
   friend: User;
 }): JSX.Element => {
-  const previewText =
-    lastMessage.id === -1 ? "No messages yet." : lastMessage.content;
-
   const isFromSelf =
     lastMessage.id !== -1 && lastMessage.senderId === sessionUser.id;
+
+  // Check if the message content looks like encrypted content (contains dots and base64-like characters)
+  const isEncrypted =
+    lastMessage.id !== -1 &&
+    lastMessage.content.includes(".") &&
+    lastMessage.content.length > 20;
+
+  let previewText: string;
+  if (lastMessage.id === -1) {
+    previewText = "No messages yet.";
+  } else if (isEncrypted) {
+    previewText = isFromSelf
+      ? "You sent a message"
+      : `${friend.username} sent a message`;
+  } else {
+    previewText = lastMessage.content;
+  }
 
   return (
     <div>

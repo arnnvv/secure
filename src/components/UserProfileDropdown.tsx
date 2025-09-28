@@ -60,7 +60,13 @@ export async function UserProfileDropdown() {
 }
 
 // Mobile-specific dropdown component
-export function MobileUserProfileDropdown({ user, onClose }: { user?: { username: string | null; picture?: string | null } | null; onClose: () => void }) {
+export function MobileUserProfileDropdown({
+  user,
+  onClose,
+}: {
+  user?: { username: string | null; picture?: string | null } | null;
+  onClose: () => void;
+}) {
   const text: string = !user?.picture ? "Upload Image" : "Change Image";
 
   return (
@@ -79,7 +85,7 @@ export function MobileUserProfileDropdown({ user, onClose }: { user?: { username
           </div>
         </div>
       </div>
-      
+
       <div className="py-1">
         <UploadFormComponent action={uploadFile}>
           <label
@@ -94,7 +100,7 @@ export function MobileUserProfileDropdown({ user, onClose }: { user?: { username
             <FileInput />
           </label>
         </UploadFormComponent>
-        
+
         <SignOutFormComponent action={signOutAction}>
           <button
             type="submit"
@@ -127,7 +133,7 @@ export function MobileUserProfileDropdownSkeleton() {
           </div>
         </div>
       </div>
-      
+
       <div className="py-1">
         <div className="px-4 py-3">
           <div className="flex items-center">
@@ -135,7 +141,7 @@ export function MobileUserProfileDropdownSkeleton() {
             <div className="h-4 w-24 bg-[#2A2A3E] rounded animate-pulse"></div>
           </div>
         </div>
-        
+
         <div className="px-4 py-3">
           <div className="flex items-center">
             <div className="w-4 h-4 bg-[#2A2A3E] rounded mr-3 animate-pulse"></div>

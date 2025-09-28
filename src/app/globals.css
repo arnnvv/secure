@@ -294,7 +294,14 @@
 
 /* Dark theme skeleton styles */
 .dark .react-loading-skeleton {
-  background: linear-gradient(90deg, #2A2A3E 25%, #3A3A4E 50%, #2A2A3E 75%);
+  background: linear-gradient(90deg, #2a2a3e 25%, #3a3a4e 50%, #2a2a3e 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+/* Default skeleton styles for dark theme */
+.react-loading-skeleton {
+  background: linear-gradient(90deg, #2a2a3e 25%, #3a3a4e 50%, #2a2a3e 75%);
   background-size: 200% 100%;
   animation: loading 1.5s infinite;
 }

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, lt } from "drizzle-orm";
 import { SESSION_MAX_AGE_SECONDS } from "./constants";
 import { db } from "./db";
 import type { Session, User } from "./db/schema";
@@ -43,13 +43,25 @@ export async function validateSessionToken(
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
     .where(eq(sessions.id, sessionId));
+
   if (result.length < 1) {
     return {
       session: null,
       user: null,
     };
   }
+
   const { user, session } = result[0];
+
+  // Check if session has expired
+  if (session.expiresAt < new Date()) {
+    // Clean up expired session
+    await invalidateSession(session.id);
+    return {
+      session: null,
+      user: null,
+    };
+  }
 
   return {
     session,
@@ -59,4 +71,9 @@ export async function validateSessionToken(
 
 export async function invalidateSession(sessionId: string): Promise<void> {
   await db.delete(sessions).where(eq(sessions.id, sessionId));
+}
+
+export async function cleanupExpiredSessions(): Promise<void> {
+  const now = new Date();
+  await db.delete(sessions).where(lt(sessions.expiresAt, now));
 }

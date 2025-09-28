@@ -31,7 +31,6 @@ export default function RootLayout({
             fontSans.variable,
           )}
         >
-          
           {children}
           <Toaster richColors={true} />
         </body>
