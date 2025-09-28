@@ -7,7 +7,7 @@ import {
 export default function Page(): JSX.Element {
   return (
     <div className="h-full flex flex-col bg-[#1A1A2E]">
-      {/* Mobile Header */}
+      {/* Mobile Content Header */}
       <div className="lg:hidden px-4 py-4">
         <div className="flex items-center justify-between">
           <div>

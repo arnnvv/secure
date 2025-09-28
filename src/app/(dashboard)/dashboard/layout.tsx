@@ -41,7 +41,7 @@ export default async function DashboardLayout({
     <E2EEProvider>
       <FriendsProvider initialFriends={friends}>
         <div className="w-full h-screen bg-[#1A1A2E] flex flex-col">
-          {/* Mobile Header */}
+          {/* Mobile Header - Main Navbar */}
           <div className="lg:hidden">
             <MobileHeader user={user} />
           </div>
