@@ -69,25 +69,25 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --background: 26 26 46; /* #1A1A2E */
+    --foreground: 255 255 255; /* white */
+    --card: 32 32 58; /* #20203A */
+    --card-foreground: 255 255 255; /* white */
+    --popover: 32 32 58; /* #20203A */
+    --popover-foreground: 255 255 255; /* white */
+    --primary: 147 51 234; /* purple-600 */
+    --primary-foreground: 255 255 255; /* white */
+    --secondary: 42 42 62; /* #2A2A3E */
+    --secondary-foreground: 255 255 255; /* white */
+    --muted: 42 42 62; /* #2A2A3E */
+    --muted-foreground: 156 163 175; /* gray-400 */
+    --accent: 42 42 62; /* #2A2A3E */
+    --accent-foreground: 255 255 255; /* white */
+    --destructive: 239 68 68; /* red-500 */
+    --destructive-foreground: 255 255 255; /* white */
+    --border: 42 42 62; /* #2A2A3E */
+    --input: 42 42 62; /* #2A2A3E */
+    --ring: 147 51 234; /* purple-600 */
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
@@ -126,6 +126,139 @@
 
   .mobile-chat-input {
     @apply border-t bg-white p-2 sm:p-4;
+  }
+
+  /* Mobile bottom navigation */
+  .mobile-bottom-nav {
+    @apply fixed bottom-0 left-0 right-0 bg-[#1A1A2E] border-t border-[#2A2A3E] px-4 py-2 flex items-center justify-around z-50;
+  }
+
+  .mobile-bottom-nav-item {
+    @apply flex flex-col items-center justify-center py-2 px-3 rounded-lg transition-colors min-w-0 flex-1;
+  }
+
+  .mobile-bottom-nav-item.active {
+    @apply text-purple-400;
+  }
+
+  .mobile-bottom-nav-item.inactive {
+    @apply text-gray-300 hover:text-white;
+  }
+
+  .notification-badge {
+    @apply absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium;
+  }
+
+  /* Mobile header */
+  .mobile-header {
+    @apply bg-[#20203A] px-4 py-4 border-b border-[#2A2A3E] flex items-center justify-between;
+  }
+
+  .avatar-purple {
+    @apply bg-gradient-to-br from-purple-500 to-blue-600 text-white font-semibold;
+  }
+
+  /* Mobile chat list items */
+  .mobile-chat-item {
+    @apply flex items-center space-x-3 p-4 hover:bg-[#2A2A3E] transition-colors cursor-pointer;
+  }
+
+  .mobile-chat-avatar {
+    @apply w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white font-semibold text-lg;
+  }
+
+  .mobile-chat-content {
+    @apply flex-1 min-w-0;
+  }
+
+  .mobile-chat-name {
+    @apply text-white font-semibold text-base;
+  }
+
+  .mobile-chat-preview {
+    @apply text-gray-400 text-sm truncate mt-1;
+  }
+
+  .mobile-chat-time {
+    @apply text-gray-400 text-xs;
+  }
+
+  .mobile-chat-badge {
+    @apply w-6 h-6 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center font-medium;
+  }
+
+  /* Mobile friend request cards */
+  .mobile-friend-request-card {
+    @apply bg-[#20203A] rounded-lg p-4 mb-3 border border-[#2A2A3E];
+  }
+
+  .mobile-friend-request-avatar {
+    @apply w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white font-semibold text-lg;
+  }
+
+  .mobile-friend-request-name {
+    @apply text-white font-semibold text-base;
+  }
+
+  .mobile-friend-request-username {
+    @apply text-gray-400 text-sm;
+  }
+
+  .mobile-friend-request-mutual {
+    @apply text-blue-400 text-sm cursor-pointer hover:text-blue-300;
+  }
+
+  .mobile-friend-request-actions {
+    @apply flex space-x-3 mt-3;
+  }
+
+  .mobile-accept-btn {
+    @apply flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors;
+  }
+
+  .mobile-decline-btn {
+    @apply flex-1 bg-transparent border border-gray-600 hover:border-gray-500 text-gray-300 hover:text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center space-x-2 transition-colors;
+  }
+
+  /* Mobile add friend page */
+  .mobile-add-friend-icon {
+    @apply w-20 h-20 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-6;
+  }
+
+  .mobile-add-friend-title {
+    @apply text-white font-bold text-2xl text-center mb-2;
+  }
+
+  .mobile-add-friend-subtitle {
+    @apply text-gray-300 text-sm text-center mb-8;
+  }
+
+  .mobile-search-input {
+    @apply w-full pl-10 pr-3 py-3 bg-[#20203A] border border-[#2A2A3E] rounded-lg text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent;
+  }
+
+  .mobile-send-btn {
+    @apply w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold py-3 rounded-lg flex items-center justify-center space-x-2 transition-colors;
+  }
+
+  .mobile-tips-box {
+    @apply bg-[#20203A] rounded-lg p-4 border border-[#2A2A3E];
+  }
+
+  .mobile-tips-title {
+    @apply text-white font-semibold text-sm mb-3;
+  }
+
+  .mobile-tips-list {
+    @apply space-y-2 text-sm text-gray-300;
+  }
+
+  .mobile-tips-item {
+    @apply flex items-start;
+  }
+
+  .mobile-tips-bullet {
+    @apply text-gray-400 mr-2;
   }
 }
 

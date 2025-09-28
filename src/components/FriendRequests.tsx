@@ -86,33 +86,56 @@ export const FriendRequests = ({
   };
 
   return (
-    <>
+    <div className="h-full overflow-y-auto">
       {friendReqs.length === 0 ? (
-        <p className="text-sm italic text-zinc-500">No friend requests..</p>
-      ) : (
-        friendReqs.map((friendReq) => (
-          <div key={friendReq.id} className="flex gap-4 items-center">
-            <UserPlus className="text-black" />
-            <p className="font-medium text-lg">{friendReq.username}</p>
-            <button
-              type="button"
-              onClick={() => handleAccept(friendReq.id)}
-              aria-label="accept friend"
-              className="w-8 h-8 bg-cyan-500 hover:bg-cyan-600 grid place-items-center rounded-full transition hover:shadow-md"
-            >
-              <Check className="font-semibold text-white w-3/4 h-3/4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => handleReject(friendReq.id)}
-              aria-label="deny friend"
-              className="w-8 h-8 bg-red-600 hover:bg-red-700 grid place-items-center rounded-full transition hover:shadow-md"
-            >
-              <X className="font-semibold text-white w-3/4 h-3/4" />
-            </button>
+        <div className="flex flex-col items-center justify-center h-full text-center px-4">
+          <div className="w-16 h-16 bg-[#20203A] rounded-full flex items-center justify-center mb-4">
+            <UserPlus className="text-gray-400 w-8 h-8" />
           </div>
-        ))
+          <p className="text-gray-300 text-sm">No friend requests</p>
+        </div>
+      ) : (
+        <div className="space-y-0">
+          {friendReqs.map((friendReq) => (
+            <div 
+              key={friendReq.id} 
+              className="mobile-friend-request-card"
+            >
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="mobile-friend-request-avatar">
+                  {friendReq.username[0].toUpperCase()}
+                </div>
+                <div className="flex-1">
+                  <h3 className="mobile-friend-request-name">{friendReq.username}</h3>
+                  <p className="mobile-friend-request-username">@{friendReq.username.toLowerCase()}</p>
+                  <p className="mobile-friend-request-mutual">3 mutual friends</p>
+                </div>
+              </div>
+              
+              <div className="mobile-friend-request-actions">
+                <button
+                  type="button"
+                  onClick={() => handleAccept(friendReq.id)}
+                  aria-label="accept friend"
+                  className="mobile-accept-btn"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Accept</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleReject(friendReq.id)}
+                  aria-label="deny friend"
+                  className="mobile-decline-btn"
+                >
+                  <X className="w-4 h-4" />
+                  <span>Decline</span>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
-    </>
+    </div>
   );
 };

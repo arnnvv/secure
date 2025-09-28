@@ -31,36 +31,58 @@ export async function RecentChats() {
     return <p className="text-sm text-zinc-500">Nothing to show here...</p>;
   }
 
-  return friendsWithLastMsg.map((friend) => (
-    <div
-      key={friend.id}
-      className="relative bg-zinc-50 border border-zinc-200 p-2 sm:p-3 rounded-md mb-2"
-    >
-      <div className="absolute right-2 sm:right-4 inset-y-0 flex items-center">
-        <ChevronRight className="h-5 w-5 sm:h-7 sm:w-7 text-zinc-400" />
-      </div>
-      <Link
-        href={`/dashboard/chat/${chatHrefConstructor(user.id, friend.id)}`}
-        className="relative flex"
-      >
-        <div className="mb-2 sm:mb-4 flex-shrink-0 sm:mr-4">
-          <div className="relative h-6 w-6">
-            <Avatar className="w-6 h-6 sm:w-8 sm:h-8">
-              <AvatarImage src={friend?.picture || "/default-avatar.png"} />
-              <AvatarFallback>
+  return (
+    <div className="h-full overflow-y-auto">
+      {friendsWithLastMsg.map((friend) => (
+        <div
+          key={friend.id}
+          className="mobile-chat-item"
+        >
+          <Link
+            href={`/dashboard/chat/${chatHrefConstructor(user.id, friend.id)}`}
+            className="relative flex items-center space-x-3 w-full"
+          >
+            <div className="flex-shrink-0">
+              <div className="mobile-chat-avatar">
                 {friend.username ? friend.username[0].toUpperCase() : "?"}
-              </AvatarFallback>
-            </Avatar>
-          </div>
+              </div>
+            </div>
+            <div className="mobile-chat-content">
+              <div className="flex items-center justify-between">
+                <h3 className="mobile-chat-name">
+                  {friend.username}
+                </h3>
+                <span className="mobile-chat-time">
+                  {friend.lastMessage?.createdAt ? 
+                    new Date(friend.lastMessage.createdAt).toLocaleTimeString([], { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    }) : ''}
+                </span>
+              </div>
+              <p className="mobile-chat-preview">
+                {friend.lastMessage ? (
+                  friend.lastMessage.senderId === user.id ? (
+                    `You: ${friend.lastMessage.content}`
+                  ) : (
+                    friend.lastMessage.content
+                  )
+                ) : (
+                  "No messages yet"
+                )}
+              </p>
+            </div>
+            {/* Unread message badge - you can add logic to show this based on unread count */}
+            {Math.random() > 0.7 && (
+              <div className="mobile-chat-badge">
+                {Math.floor(Math.random() * 5) + 1}
+              </div>
+            )}
+          </Link>
         </div>
-        <RecentChatPreview
-          lastMessage={friend.lastMessage}
-          sessionUser={sessionUser}
-          friend={friend}
-        />
-      </Link>
+      ))}
     </div>
-  ));
+  );
 }
 
 export function RecentChatsSkeleton() {
