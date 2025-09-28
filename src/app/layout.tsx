@@ -31,7 +31,7 @@ export default function RootLayout({
             fontSans.variable,
           )}
         >
-          <Navbar />
+          
           {children}
           <Toaster richColors={true} />
         </body>
