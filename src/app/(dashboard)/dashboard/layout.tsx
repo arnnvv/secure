@@ -119,7 +119,10 @@ export default async function DashboardLayout({
 
           {/* Mobile Bottom Navigation */}
           <div className="lg:hidden">
-            <MobileBottomNavigation />
+            <MobileBottomNavigation 
+              unreadChats={0} // TODO: Calculate real unread chat count
+              pendingRequests={incommingFriendReqUsers.length}
+            />
           </div>
         </div>
       </FriendsProvider>

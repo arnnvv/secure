@@ -11,7 +11,15 @@ interface NavItem {
   badge?: number;
 }
 
-export function MobileBottomNavigation(): JSX.Element {
+interface MobileBottomNavigationProps {
+  unreadChats?: number;
+  pendingRequests?: number;
+}
+
+export function MobileBottomNavigation({ 
+  unreadChats = 0, 
+  pendingRequests = 0 
+}: MobileBottomNavigationProps): JSX.Element {
   const pathname = usePathname();
 
   const navItems: NavItem[] = [
@@ -23,7 +31,7 @@ export function MobileBottomNavigation(): JSX.Element {
         </svg>
       ),
       label: "Chats",
-      badge: 2, // This would come from props or context
+      badge: unreadChats > 0 ? unreadChats : undefined,
     },
     {
       href: "/dashboard/add",
@@ -42,7 +50,7 @@ export function MobileBottomNavigation(): JSX.Element {
         </svg>
       ),
       label: "Requests",
-      badge: 2, // This would come from props or context
+      badge: pendingRequests > 0 ? pendingRequests : undefined,
     },
   ];
 

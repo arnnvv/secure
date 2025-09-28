@@ -234,7 +234,7 @@
   }
 
   .mobile-search-input {
-    @apply w-full pl-10 pr-3 py-3 bg-[#20203A] border border-[#2A2A3E] rounded-lg text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent;
+    @apply w-full px-4 py-3 bg-[#20203A] border border-[#2A2A3E] rounded-lg text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent;
   }
 
   .mobile-send-btn {
@@ -290,4 +290,20 @@
 
 .scrollbar-thumb-rounded::-webkit-scrollbar-thumb {
   border-radius: 0.25rem;
+}
+
+/* Dark theme skeleton styles */
+.dark .react-loading-skeleton {
+  background: linear-gradient(90deg, #2A2A3E 25%, #3A3A4E 50%, #2A2A3E 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
