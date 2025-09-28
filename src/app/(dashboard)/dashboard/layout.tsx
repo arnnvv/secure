@@ -20,6 +20,8 @@ import { MobileHeader } from "@/components/MobileHeader";
 import { MobileBottomNavigation } from "@/components/MobileBottomNavigation";
 import type { User } from "@/lib/db/schema";
 import { getFriends } from "@/lib/getFriends";
+import { getFriendRequests } from "@/lib/getFriendRequests";
+import { resolveIdstoUsers } from "@/lib/resolveIdsToUsers";
 export const metadata: Metadata = {
   title: "Dashboard",
   description: "Your dashboard",
@@ -36,6 +38,8 @@ export default async function DashboardLayout({
 }): Promise<JSX.Element> {
   const { user } = await getCurrentSession();
   const friends: User[] = user ? await getFriends(user.id) : [];
+  const friendRequests = user ? await getFriendRequests(user.id) : [];
+  const incommingFriendReqUsers: User[] = user ? await resolveIdstoUsers(friendRequests.map(req => req.requesterId)) : [];
 
   return (
     <E2EEProvider>
