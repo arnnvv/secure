@@ -14,7 +14,7 @@ For anyone interested in privacy and security, understanding *how* GhostLink wor
 
 Your privacy is mathematically guaranteed through a robust E2EE implementation. Here’s a high-level overview:
 
-1.  **Key Generation**: The first time you use GhostLink, a unique cryptographic key pair (public and private) is generated directly in your browser using the Web Crypto API. Your private key **never leaves your device** and is stored securely in your browser's `localStorage`[cite: 885].
+1.  **Key Generation**: The first time you use GhostLink, a unique cryptographic key pair (public and private) is generated directly in your browser using the Web Crypto API. Your private key **never leaves your device** and is stored securely in your browser's `localStorage`.
 2. **Public Key Sharing**: Your public key is uploaded to the server, associated only with your device ID. This allows other users to find your public key to initiate a secure conversation.
 3.  **Secure Session Establishment**: When you start a chat with someone, your client fetches their public key. It then uses an **Elliptic-curve Diffie–Hellman (ECDH)** key exchange algorithm to derive a shared secret key. This process is magical: you and your chat partner can calculate the *same* secret key using your private key and their public key, without ever transmitting the secret key over the network.
 4. **Message Encryption**: All messages are encrypted and decrypted on your device using the **AES-GCM** symmetric cipher with the derived shared key. The server only ever sees meaningless encrypted text blobs.
